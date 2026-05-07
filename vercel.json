@@ -2,15 +2,15 @@
   "crons": [
     {
       "path": "/api/strava/sync",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/plans/review",
-      "schedule": "0 6 * * 1"
+      "schedule": "0 7 * * 1"
     },
     {
       "path": "/api/conflicts/scan",
-      "schedule": "0 7 * * 1"
+      "schedule": "0 8 * * 1"
     }
   ]
 }
