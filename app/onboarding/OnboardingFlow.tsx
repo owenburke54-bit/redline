@@ -1,0 +1,406 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Zap, Trophy, Activity, Target, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+const STEPS = ["profile", "dedication", "event"] as const;
+type Step = (typeof STEPS)[number];
+
+const EVENT_TYPES = [
+  { value: "MARATHON", label: "Marathon" },
+  { value: "HALF_MARATHON", label: "Half Marathon" },
+  { value: "HYROX", label: "Hyrox" },
+  { value: "HYROX_DOUBLES", label: "Hyrox Mixed Doubles" },
+  { value: "FIVE_K", label: "5K" },
+  { value: "TEN_K", label: "10K" },
+];
+
+const DEDICATION_COPY: Record<number, string> = {
+  1: "Easy maintenance. Fitness without pressure.",
+  2: "Light commitment. A few sessions a week.",
+  3: "Consistent but flexible. Life comes first.",
+  4: "Building a habit. Training is a priority.",
+  5: "Solid base. You show up most days.",
+  6: "Serious. You plan your week around training.",
+  7: "High output. You train consistently and push hard.",
+  8: "Very high. Few sessions missed. Expect difficulty.",
+  9: "Elite commitment. You will not miss a session.",
+  10: "All in. This is your life right now.",
+};
+
+interface Props {
+  userId: string;
+  userName?: string | null;
+}
+
+export function OnboardingFlow({ userId, userName }: Props) {
+  const router = useRouter();
+  const [step, setStep] = useState<Step>("profile");
+  const [loading, setLoading] = useState(false);
+
+  // Profile state
+  const [yearsRunning, setYearsRunning] = useState("");
+  const [weeklyMileage, setWeeklyMileage] = useState("");
+  const [injuryHistory, setInjuryHistory] = useState("");
+  const [goalStatement, setGoalStatement] = useState("");
+  const [painTolerance, setPainTolerance] = useState([6]);
+
+  // Dedication state
+  const [dedication, setDedication] = useState([7]);
+
+  // Event state
+  const [eventName, setEventName] = useState("");
+  const [eventType, setEventType] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [eventLocation, setEventLocation] = useState("");
+  const [goalTime, setGoalTime] = useState("");
+
+  async function handleProfileNext() {
+    setLoading(true);
+    try {
+      await fetch("/api/onboarding/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          yearsRunning: yearsRunning ? parseInt(yearsRunning) : null,
+          weeklyMileageBaseline: weeklyMileage ? parseInt(weeklyMileage) : null,
+          injuryHistory: injuryHistory || null,
+          goalStatement: goalStatement || null,
+          painToleranceRating: painTolerance[0],
+        }),
+      });
+      setStep("dedication");
+    } catch {
+      toast.error("Failed to save profile.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDedicationNext() {
+    setLoading(true);
+    try {
+      await fetch("/api/onboarding/dedication", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dedicationScore: dedication[0] }),
+      });
+      setStep("event");
+    } catch {
+      toast.error("Failed to save dedication.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleEventSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!eventName || !eventType || !eventDate) {
+      toast.error("Event name, type, and date are required.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/onboarding/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event: {
+            name: eventName,
+            type: eventType,
+            date: eventDate,
+            location: eventLocation || null,
+            goalTime: goalTime || null,
+            priority: 1,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("You're all set. Generating your plan…");
+      router.push("/");
+      router.refresh();
+    } catch {
+      toast.error("Failed to complete setup.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const stepIdx = STEPS.indexOf(step);
+
+  return (
+    <div className="w-full max-w-lg">
+      {/* Logo */}
+      <div className="flex items-center justify-center gap-2 mb-10">
+        <Zap className="h-6 w-6 text-primary" strokeWidth={2.5} />
+        <span className="text-2xl font-bold tracking-widest uppercase">Redline</span>
+      </div>
+
+      {/* Progress */}
+      <div className="flex gap-2 mb-8">
+        {STEPS.map((s, i) => (
+          <div
+            key={s}
+            className={cn(
+              "h-1 flex-1 rounded-full transition-colors",
+              i <= stepIdx ? "bg-primary" : "bg-border"
+            )}
+          />
+        ))}
+      </div>
+
+      {/* Step: Profile */}
+      {step === "profile" && (
+        <div className="space-y-6">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Activity className="h-4 w-4 text-primary" />
+              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Step 1 of 3
+              </span>
+            </div>
+            <h2 className="text-xl font-bold">
+              Hey {userName?.split(" ")[0] ?? "Athlete"}. Tell us about yourself.
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              This shapes every plan we generate.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="years">Years running</Label>
+                <Input
+                  id="years"
+                  type="number"
+                  min={0}
+                  max={50}
+                  placeholder="3"
+                  value={yearsRunning}
+                  onChange={(e) => setYearsRunning(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="mileage">Weekly km (baseline)</Label>
+                <Input
+                  id="mileage"
+                  type="number"
+                  min={0}
+                  placeholder="40"
+                  value={weeklyMileage}
+                  onChange={(e) => setWeeklyMileage(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="injury">Injury history (optional)</Label>
+              <Textarea
+                id="injury"
+                placeholder="Left knee tendinopathy in 2024, resolved. No current issues."
+                rows={2}
+                value={injuryHistory}
+                onChange={(e) => setInjuryHistory(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="goal">What do you want to achieve?</Label>
+              <Textarea
+                id="goal"
+                placeholder="I want to finish the Marine Corps Marathon in under 4 hours."
+                rows={2}
+                value={goalStatement}
+                onChange={(e) => setGoalStatement(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <Label>
+                Pain tolerance: <span className="text-primary font-semibold">{painTolerance[0]}/10</span>
+              </Label>
+              <Slider
+                min={1}
+                max={10}
+                step={1}
+                value={painTolerance}
+                onValueChange={setPainTolerance}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>1 — Very sensitive</span>
+                <span>10 — Iron</span>
+              </div>
+            </div>
+          </div>
+
+          <Button onClick={handleProfileNext} className="w-full gap-2" disabled={loading}>
+            Continue <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Step: Dedication */}
+      {step === "dedication" && (
+        <div className="space-y-6">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Target className="h-4 w-4 text-primary" />
+              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Step 2 of 3
+              </span>
+            </div>
+            <h2 className="text-xl font-bold">How hard do you want to go?</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              This controls plan volume, rest days, and AI coaching tone.
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            <div className="rounded border border-border bg-card p-6 text-center space-y-2">
+              <p className="text-5xl font-bold text-primary tabular-nums">{dedication[0]}</p>
+              <p className="text-sm text-muted-foreground">{DEDICATION_COPY[dedication[0]]}</p>
+            </div>
+
+            <Slider
+              min={1}
+              max={10}
+              step={1}
+              value={dedication}
+              onValueChange={setDedication}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>1 — Maintenance</span>
+              <span>10 — All in</span>
+            </div>
+
+            {dedication[0] >= 8 && (
+              <p className="text-xs text-primary border border-primary/30 rounded p-3">
+                You asked for hard. The AI will not soften your plan. Expect to be pushed.
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setStep("profile")} className="flex-1">
+              Back
+            </Button>
+            <Button onClick={handleDedicationNext} className="flex-1 gap-2" disabled={loading}>
+              Continue <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step: Event */}
+      {step === "event" && (
+        <form onSubmit={handleEventSubmit} className="space-y-6">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Trophy className="h-4 w-4 text-primary" />
+              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Step 3 of 3
+              </span>
+            </div>
+            <h2 className="text-xl font-bold">Add your first event.</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              You can add more events from the dashboard.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="eventName">Event name *</Label>
+              <Input
+                id="eventName"
+                required
+                placeholder="Marine Corps Marathon"
+                value={eventName}
+                onChange={(e) => setEventName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Event type *</Label>
+              <Select onValueChange={setEventType} value={eventType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EVENT_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="eventDate">Race date *</Label>
+                <Input
+                  id="eventDate"
+                  type="date"
+                  required
+                  value={eventDate}
+                  onChange={(e) => setEventDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="goalTime">Goal time</Label>
+                <Input
+                  id="goalTime"
+                  placeholder="sub-4:00:00"
+                  value={goalTime}
+                  onChange={(e) => setGoalTime(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="location">Location (optional)</Label>
+              <Input
+                id="location"
+                placeholder="Washington, D.C."
+                value={eventLocation}
+                onChange={(e) => setEventLocation(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setStep("dedication")}
+              className="flex-1"
+            >
+              Back
+            </Button>
+            <Button type="submit" className="flex-1 gap-2" disabled={loading}>
+              {loading ? "Setting up…" : "Finish setup"} <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,256 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  name               String?
+  password           String?
+  stravaId           String?   @unique
+  stravaAccessToken  String?
+  stravaRefreshToken String?
+  stravaTokenExpiry  DateTime?
+  dedicationScore    Int       @default(7)
+  onboardingComplete Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  accounts         Account[]
+  sessions         Session[]
+  events           Event[]
+  plans            TrainingPlan[]
+  workouts         Workout[]
+  stravaActivities StravaActivity[]
+  checkins         WeeklyCheckin[]
+  athleteProfile   AthleteProfile?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model AthleteProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  yearsRunning          Int?
+  weeklyMileageBaseline Int?
+  injuryHistory         String?
+  goalStatement         String?
+  painToleranceRating   Int?
+
+  inferredDedicationScore Float?
+  avgWeeklyEffort         Float?
+  consistencyScore        Float?
+
+  updatedAt DateTime @updatedAt
+}
+
+model Event {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+
+  name     String
+  type     EventType
+  date     DateTime
+  location String?
+  goalTime String?
+  priority Int       @default(1)
+  isActive Boolean   @default(true)
+
+  plan      TrainingPlan?
+  createdAt DateTime      @default(now())
+}
+
+enum EventType {
+  MARATHON
+  HALF_MARATHON
+  HYROX
+  HYROX_DOUBLES
+  FIVE_K
+  TEN_K
+}
+
+model TrainingPlan {
+  id      String @id @default(cuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  eventId String @unique
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  templateBase    PlanTemplate
+  weeklyStructure Json
+  aiOverrides     Json?
+
+  currentWeek  Int        @default(1)
+  totalWeeks   Int
+  status       PlanStatus @default(ACTIVE)
+  lastAiReview DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  workouts Workout[]
+}
+
+enum PlanTemplate {
+  HAL_HIGDON_NOVICE
+  HAL_HIGDON_INTERMEDIATE
+  HAL_HIGDON_ADVANCED
+  HYROX_8WK
+  HYROX_16WK
+}
+
+enum PlanStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ABANDONED
+}
+
+model Workout {
+  id     String       @id @default(cuid())
+  userId String
+  user   User         @relation(fields: [userId], references: [id])
+  planId String
+  plan   TrainingPlan @relation(fields: [planId], references: [id])
+
+  scheduledDate DateTime
+  type          WorkoutType
+  title         String
+  description   String
+
+  targetDistance Float?
+  targetDuration Int?
+  targetPace     String?
+  intensityZone  Int?
+
+  stations   Json?
+  isHyroxSim Boolean @default(false)
+
+  status           WorkoutStatus @default(SCHEDULED)
+  stravaActivityId String?
+  completedAt      DateTime?
+  actualDistance   Float?
+  actualDuration   Int?
+  perceivedEffort  Int?
+
+  aiModified     Boolean @default(false)
+  aiModifyReason String?
+  conflictFlag   Boolean @default(false)
+  conflictNote   String?
+
+  createdAt DateTime @default(now())
+}
+
+enum WorkoutType {
+  EASY_RUN
+  LONG_RUN
+  TEMPO
+  INTERVALS
+  HYROX_STATION_WORK
+  HYROX_SIM
+  STRENGTH
+  CROSS_TRAIN
+  REST
+  RACE
+}
+
+enum WorkoutStatus {
+  SCHEDULED
+  COMPLETED
+  SKIPPED
+  MODIFIED
+}
+
+model StravaActivity {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  stravaId         String   @unique
+  type             String
+  name             String
+  distance         Float
+  movingTime       Int
+  elapsedTime      Int
+  startDate        DateTime
+  averageHeartrate Float?
+  maxHeartrate     Float?
+  averageSpeed     Float?
+  effortScore      Float?
+
+  matchedWorkoutId String?
+
+  createdAt DateTime @default(now())
+}
+
+model WeeklyCheckin {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  weekOf          DateTime
+  perceivedEffort Int
+  bodyFeel        Int
+  completedCount  Int
+  plannedCount    Int
+  notes           String?
+
+  aiResponse   String?
+  planAdjusted Boolean @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model ConflictLog {
+  id     String @id @default(cuid())
+  userId String
+
+  detectedAt      DateTime @default(now())
+  weekOf          DateTime
+  conflictType    String
+  description     String
+  affectedPlanIds String[]
+  aiSuggestion    String?
+  resolved        Boolean  @default(false)
+  resolvedBy      String?
+}
