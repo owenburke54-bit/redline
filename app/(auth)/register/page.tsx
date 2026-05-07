@@ -16,28 +16,36 @@ export default function RegisterPage() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    const fd = new FormData(e.currentTarget);
+    try {
+      const fd = new FormData(e.currentTarget);
 
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: fd.get("name"),
-        email: fd.get("email"),
-        password: fd.get("password"),
-      }),
-    });
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fd.get("name"),
+          email: fd.get("email"),
+          password: fd.get("password"),
+        }),
+      });
 
-    setLoading(false);
+      if (!res.ok) {
+        let message = "Registration failed.";
+        try {
+          const data = await res.json();
+          message = data.error ?? message;
+        } catch {}
+        toast.error(message);
+        return;
+      }
 
-    if (!res.ok) {
-      const data = await res.json();
-      toast.error(data.error ?? "Registration failed.");
-      return;
+      toast.success("Account created. Sign in to continue.");
+      router.push("/login");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setLoading(false);
     }
-
-    toast.success("Account created. Sign in to continue.");
-    router.push("/login");
   }
 
   return (

@@ -10,21 +10,26 @@ const registerSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const parsed = registerSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  try {
+    const body = await req.json();
+    const parsed = registerSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    }
+
+    const { name, email, password } = parsed.data;
+
+    const existing = await db.user.findUnique({ where: { email } });
+    if (existing) {
+      return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+    }
+
+    const hashed = await bcrypt.hash(password, 12);
+    await db.user.create({ data: { name, email, password: hashed } });
+
+    return NextResponse.json({ success: true }, { status: 201 });
+  } catch (err) {
+    console.error("[register]", err);
+    return NextResponse.json({ error: "Server error. Please try again." }, { status: 500 });
   }
-
-  const { name, email, password } = parsed.data;
-
-  const existing = await db.user.findUnique({ where: { email } });
-  if (existing) {
-    return NextResponse.json({ error: "Email already in use" }, { status: 409 });
-  }
-
-  const hashed = await bcrypt.hash(password, 12);
-  await db.user.create({ data: { name, email, password: hashed } });
-
-  return NextResponse.json({ success: true }, { status: 201 });
 }
