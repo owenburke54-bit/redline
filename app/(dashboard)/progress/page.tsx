@@ -57,11 +57,11 @@ export default async function ProgressPage() {
     const completed = weekWorkouts.filter(w => w.status === "COMPLETED").length;
     const planned = nonRest.length;
 
-    const marathonKm = nonRest
+    const marathonMi = nonRest
       .filter(w => !w.plan.event.type.startsWith("HYROX"))
       .reduce((s, w) => s + (w.targetDistance ?? 0), 0);
 
-    const hyroxKm = nonRest
+    const hyroxMi = nonRest
       .filter(w => w.plan.event.type.startsWith("HYROX"))
       .reduce((s, w) => s + (w.targetDistance ?? 0), 0);
 
@@ -71,8 +71,8 @@ export default async function ProgressPage() {
 
     return {
       label: weekMon.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      marathonKm: Math.round(marathonKm * 10) / 10,
-      hyroxKm: Math.round(hyroxKm * 10) / 10,
+      marathonMi: Math.round(marathonMi * 10) / 10,
+      hyroxMi: Math.round(hyroxMi * 10) / 10,
       completed,
       planned,
       rate: planned > 0 ? Math.round((completed / planned) * 100) : 0,
@@ -127,7 +127,7 @@ export default async function ProgressPage() {
     };
   });
 
-  const thisWeekKm = currentWeekData.marathonKm + currentWeekData.hyroxKm;
+  const thisWeekMi = currentWeekData.marathonMi + currentWeekData.hyroxMi;
 
   return (
     <div className="space-y-8 max-w-4xl">
@@ -143,7 +143,7 @@ export default async function ProgressPage() {
         <StatCard
           icon={<TrendingUp className="h-4 w-4" />}
           label="This week"
-          value={thisWeekKm > 0 ? `${thisWeekKm.toFixed(0)} km` : `${currentWeekData.planned} sessions`}
+          value={thisWeekMi > 0 ? `${thisWeekMi.toFixed(0)} mi` : `${currentWeekData.planned} sessions`}
           sub={thisWeekKm > 0 ? "planned volume" : "planned"}
         />
         <StatCard
@@ -182,7 +182,7 @@ export default async function ProgressPage() {
             <div>
               <h2 className="text-sm font-semibold">Weekly Training Load</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Planned km by week — past 4 weeks + next 8
+                Planned miles by week — past 4 weeks + next 8
               </p>
             </div>
             <div className="flex items-center gap-3">

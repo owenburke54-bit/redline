@@ -32,8 +32,8 @@ export function formatDuration(minutes: number): string {
   return m === 0 ? `${h}h` : `${h}h ${m}min`;
 }
 
-export function formatDistance(km: number): string {
-  return `${km.toFixed(1)}km`;
+export function formatDistance(miles: number): string {
+  return `${miles.toFixed(1)}mi`;
 }
 
 export function getMonday(date: Date = new Date()): Date {

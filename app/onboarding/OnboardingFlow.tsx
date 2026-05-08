@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Zap, Trophy, Activity, Target, ChevronRight } from "lucide-react";
+import { Zap, Trophy, Activity, Target, ChevronRight, X, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -43,13 +44,22 @@ const DEDICATION_COPY: Record<number, string> = {
   10: "All in. This is your life right now.",
 };
 
+interface EventDraft {
+  name: string;
+  type: string;
+  date: string;
+  location: string;
+  goalTime: string;
+}
+
 interface Props {
   userId: string;
   userName?: string | null;
 }
 
-export function OnboardingFlow({ userId, userName }: Props) {
+export function OnboardingFlow({ userId: _userId, userName }: Props) {
   const router = useRouter();
+  const { update } = useSession();
   const [step, setStep] = useState<Step>("profile");
   const [loading, setLoading] = useState(false);
 
@@ -64,11 +74,36 @@ export function OnboardingFlow({ userId, userName }: Props) {
   const [dedication, setDedication] = useState([7]);
 
   // Event state
+  const [savedEvents, setSavedEvents] = useState<EventDraft[]>([]);
   const [eventName, setEventName] = useState("");
   const [eventType, setEventType] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [eventLocation, setEventLocation] = useState("");
   const [goalTime, setGoalTime] = useState("");
+
+  function currentFormFilled() {
+    return eventName.trim() && eventType && eventDate;
+  }
+
+  function addAnotherEvent() {
+    if (!currentFormFilled()) {
+      toast.error("Fill in event name, type, and date first.");
+      return;
+    }
+    setSavedEvents((prev) => [
+      ...prev,
+      { name: eventName, type: eventType, date: eventDate, location: eventLocation, goalTime },
+    ]);
+    setEventName("");
+    setEventType("");
+    setEventDate("");
+    setEventLocation("");
+    setGoalTime("");
+  }
+
+  function removeEvent(idx: number) {
+    setSavedEvents((prev) => prev.filter((_, i) => i !== idx));
+  }
 
   async function handleProfileNext() {
     setLoading(true);
@@ -108,34 +143,54 @@ export function OnboardingFlow({ userId, userName }: Props) {
     }
   }
 
-  async function handleEventSubmit(e: React.FormEvent) {
+  async function handleFinish(e: React.FormEvent) {
     e.preventDefault();
-    if (!eventName || !eventType || !eventDate) {
-      toast.error("Event name, type, and date are required.");
+
+    const allEvents: EventDraft[] = [...savedEvents];
+    if (currentFormFilled()) {
+      allEvents.push({
+        name: eventName,
+        type: eventType,
+        date: eventDate,
+        location: eventLocation,
+        goalTime,
+      });
+    }
+
+    if (allEvents.length === 0) {
+      toast.error("Add at least one event.");
       return;
     }
+
     setLoading(true);
     try {
       const res = await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          event: {
-            name: eventName,
-            type: eventType,
-            date: eventDate,
-            location: eventLocation || null,
-            goalTime: goalTime || null,
-            priority: 1,
-          },
+          events: allEvents.map((ev, i) => ({
+            name: ev.name,
+            type: ev.type,
+            date: ev.date,
+            location: ev.location || null,
+            goalTime: ev.goalTime || null,
+            priority: i + 1,
+          })),
         }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        let msg = "Failed to complete setup.";
+        try {
+          const d = await res.json();
+          msg = d.error ?? msg;
+        } catch {}
+        throw new Error(msg);
+      }
       toast.success("You're all set. Generating your plan…");
+      await update();
       router.push("/");
-      router.refresh();
-    } catch {
-      toast.error("Failed to complete setup.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to complete setup.");
     } finally {
       setLoading(false);
     }
@@ -144,7 +199,7 @@ export function OnboardingFlow({ userId, userName }: Props) {
   const stepIdx = STEPS.indexOf(step);
 
   return (
-    <div className="w-full max-w-lg">
+    <div className="w-full max-w-lg lg:max-w-3xl">
       {/* Logo */}
       <div className="flex items-center justify-center gap-2 mb-10">
         <Zap className="h-6 w-6 text-primary" strokeWidth={2.5} />
@@ -182,70 +237,75 @@ export function OnboardingFlow({ userId, userName }: Props) {
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="grid lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="years">Years running</Label>
+                  <Input
+                    id="years"
+                    type="number"
+                    min={0}
+                    max={50}
+                    placeholder="3"
+                    value={yearsRunning}
+                    onChange={(e) => setYearsRunning(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="mileage">Weekly miles (baseline)</Label>
+                  <Input
+                    id="mileage"
+                    type="number"
+                    min={0}
+                    placeholder="25"
+                    value={weeklyMileage}
+                    onChange={(e) => setWeeklyMileage(e.target.value)}
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
-                <Label htmlFor="years">Years running</Label>
-                <Input
-                  id="years"
-                  type="number"
-                  min={0}
-                  max={50}
-                  placeholder="3"
-                  value={yearsRunning}
-                  onChange={(e) => setYearsRunning(e.target.value)}
+                <Label htmlFor="injury">Injury history (optional)</Label>
+                <Textarea
+                  id="injury"
+                  placeholder="Left knee tendinopathy in 2024, resolved. No current issues."
+                  rows={4}
+                  value={injuryHistory}
+                  onChange={(e) => setInjuryHistory(e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="mileage">Weekly km (baseline)</Label>
-                <Input
-                  id="mileage"
-                  type="number"
-                  min={0}
-                  placeholder="40"
-                  value={weeklyMileage}
-                  onChange={(e) => setWeeklyMileage(e.target.value)}
+                <Label htmlFor="goal">What do you want to achieve?</Label>
+                <Textarea
+                  id="goal"
+                  placeholder="I want to finish the Marine Corps Marathon in under 4 hours."
+                  rows={4}
+                  value={goalStatement}
+                  onChange={(e) => setGoalStatement(e.target.value)}
                 />
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="injury">Injury history (optional)</Label>
-              <Textarea
-                id="injury"
-                placeholder="Left knee tendinopathy in 2024, resolved. No current issues."
-                rows={2}
-                value={injuryHistory}
-                onChange={(e) => setInjuryHistory(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="goal">What do you want to achieve?</Label>
-              <Textarea
-                id="goal"
-                placeholder="I want to finish the Marine Corps Marathon in under 4 hours."
-                rows={2}
-                value={goalStatement}
-                onChange={(e) => setGoalStatement(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <Label>
-                Pain tolerance: <span className="text-primary font-semibold">{painTolerance[0]}/10</span>
-              </Label>
-              <Slider
-                min={1}
-                max={10}
-                step={1}
-                value={painTolerance}
-                onValueChange={setPainTolerance}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>1 — Very sensitive</span>
-                <span>10 — Iron</span>
+              <div className="space-y-3">
+                <Label>
+                  Pain tolerance:{" "}
+                  <span className="text-primary font-semibold">{painTolerance[0]}/10</span>
+                </Label>
+                <Slider
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={painTolerance}
+                  onValueChange={setPainTolerance}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>1 — Very sensitive</span>
+                  <span>10 — Iron</span>
+                </div>
               </div>
             </div>
           </div>
@@ -272,7 +332,7 @@ export function OnboardingFlow({ userId, userName }: Props) {
             </p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6 lg:max-w-md mx-auto">
             <div className="rounded border border-border bg-card p-6 text-center space-y-2">
               <p className="text-5xl font-bold text-primary tabular-nums">{dedication[0]}</p>
               <p className="text-sm text-muted-foreground">{DEDICATION_COPY[dedication[0]]}</p>
@@ -311,7 +371,7 @@ export function OnboardingFlow({ userId, userName }: Props) {
 
       {/* Step: Event */}
       {step === "event" && (
-        <form onSubmit={handleEventSubmit} className="space-y-6">
+        <form onSubmit={handleFinish} className="space-y-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Trophy className="h-4 w-4 text-primary" />
@@ -319,51 +379,99 @@ export function OnboardingFlow({ userId, userName }: Props) {
                 Step 3 of 3
               </span>
             </div>
-            <h2 className="text-xl font-bold">Add your first event.</h2>
+            <h2 className="text-xl font-bold">Add your events.</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              You can add more events from the dashboard.
+              Add all the races you're training for. We'll build a plan around each one.
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="eventName">Event name *</Label>
-              <Input
-                id="eventName"
-                required
-                placeholder="Marine Corps Marathon"
-                value={eventName}
-                onChange={(e) => setEventName(e.target.value)}
-              />
+          {/* Saved events */}
+          {savedEvents.length > 0 && (
+            <div className="space-y-2">
+              {savedEvents.map((ev, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between rounded border border-border bg-card px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{ev.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {EVENT_TYPES.find((t) => t.value === ev.type)?.label} ·{" "}
+                      {new Date(ev.date + "T00:00:00").toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeEvent(i)}
+                    className="text-muted-foreground hover:text-foreground transition-colors ml-4"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
             </div>
+          )}
 
-            <div className="space-y-1.5">
-              <Label>Event type *</Label>
-              <Select onValueChange={setEventType} value={eventType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {EVENT_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Current event form */}
+          <div
+            className={cn(
+              "space-y-4",
+              savedEvents.length > 0 && "pt-4 border-t border-border"
+            )}
+          >
+            {savedEvents.length > 0 && (
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
+                Add another event
+              </p>
+            )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid lg:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="eventDate">Race date *</Label>
+                <Label htmlFor="eventName">
+                  Event name {savedEvents.length === 0 && <span className="text-primary">*</span>}
+                </Label>
+                <Input
+                  id="eventName"
+                  placeholder="Marine Corps Marathon"
+                  value={eventName}
+                  onChange={(e) => setEventName(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>
+                  Event type {savedEvents.length === 0 && <span className="text-primary">*</span>}
+                </Label>
+                <Select onValueChange={setEventType} value={eventType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EVENT_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="eventDate">
+                  Race date {savedEvents.length === 0 && <span className="text-primary">*</span>}
+                </Label>
                 <Input
                   id="eventDate"
                   type="date"
-                  required
                   value={eventDate}
                   onChange={(e) => setEventDate(e.target.value)}
                 />
               </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="goalTime">Goal time</Label>
                 <Input
@@ -373,18 +481,30 @@ export function OnboardingFlow({ userId, userName }: Props) {
                   onChange={(e) => setGoalTime(e.target.value)}
                 />
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="location">Location (optional)</Label>
-              <Input
-                id="location"
-                placeholder="Washington, D.C."
-                value={eventLocation}
-                onChange={(e) => setEventLocation(e.target.value)}
-              />
+              <div className="space-y-1.5 lg:col-span-2">
+                <Label htmlFor="location">Location (optional)</Label>
+                <Input
+                  id="location"
+                  placeholder="Washington, D.C."
+                  value={eventLocation}
+                  onChange={(e) => setEventLocation(e.target.value)}
+                />
+              </div>
             </div>
           </div>
+
+          {currentFormFilled() && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addAnotherEvent}
+              className="w-full gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add another event
+            </Button>
+          )}
 
           <div className="flex gap-3">
             <Button
@@ -395,7 +515,11 @@ export function OnboardingFlow({ userId, userName }: Props) {
             >
               Back
             </Button>
-            <Button type="submit" className="flex-1 gap-2" disabled={loading}>
+            <Button
+              type="submit"
+              className="flex-1 gap-2"
+              disabled={loading || (savedEvents.length === 0 && !currentFormFilled())}
+            >
               {loading ? "Setting up…" : "Finish setup"} <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

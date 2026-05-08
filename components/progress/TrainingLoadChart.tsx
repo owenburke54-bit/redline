@@ -13,8 +13,8 @@ import {
 
 interface WeeklyData {
   label: string;
-  marathonKm: number;
-  hyroxKm: number;
+  marathonMi: number;
+  hyroxMi: number;
   isCurrentWeek: boolean;
   isPast: boolean;
 }
@@ -31,22 +31,22 @@ function CustomTooltip({ active, payload, label }: {
   label?: string;
 }) {
   if (!active || !payload?.length) return null;
-  const marathon = payload.find(p => p.name === "marathonKm");
-  const hyrox = payload.find(p => p.name === "hyroxKm");
+  const marathon = payload.find(p => p.name === "marathonMi");
+  const hyrox = payload.find(p => p.name === "hyroxMi");
   const total = (marathon?.value ?? 0) + (hyrox?.value ?? 0);
 
   return (
     <div className="rounded border border-border bg-card px-3 py-2 text-xs shadow-lg">
       <p className="font-semibold mb-1">{label}</p>
       {marathon && marathon.value > 0 && (
-        <p style={{ color: "var(--marathon-color)" }}>Run: {marathon.value.toFixed(1)} km</p>
+        <p style={{ color: "var(--marathon-color)" }}>Run: {marathon.value.toFixed(1)} mi</p>
       )}
       {hyrox && hyrox.value > 0 && (
-        <p style={{ color: "var(--hyrox-color)" }}>Hyrox: {hyrox.value.toFixed(1)} km</p>
+        <p style={{ color: "var(--hyrox-color)" }}>Hyrox: {hyrox.value.toFixed(1)} mi</p>
       )}
       {total > 0 && (marathon?.value ?? 0) > 0 && (hyrox?.value ?? 0) > 0 && (
         <p className="text-muted-foreground mt-0.5 border-t border-border pt-0.5">
-          Total: {total.toFixed(1)} km
+          Total: {total.toFixed(1)} mi
         </p>
       )}
     </div>
@@ -74,7 +74,7 @@ export function TrainingLoadChart({ data, hasMarathon, hasHyrox }: TrainingLoadC
         />
         <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
         {hasMarathon && (
-          <Bar dataKey="marathonKm" name="marathonKm" stackId="m" radius={[3, 3, 0, 0]}>
+          <Bar dataKey="marathonMi" name="marathonMi" stackId="m" radius={[3, 3, 0, 0]}>
             {data.map((entry, i) => (
               <Cell
                 key={i}
@@ -85,7 +85,7 @@ export function TrainingLoadChart({ data, hasMarathon, hasHyrox }: TrainingLoadC
           </Bar>
         )}
         {hasHyrox && (
-          <Bar dataKey="hyroxKm" name="hyroxKm" stackId="h" radius={[3, 3, 0, 0]}>
+          <Bar dataKey="hyroxMi" name="hyroxMi" stackId="h" radius={[3, 3, 0, 0]}>
             {data.map((entry, i) => (
               <Cell
                 key={i}
