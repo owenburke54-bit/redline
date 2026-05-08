@@ -17,23 +17,27 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    const fd = new FormData(e.currentTarget);
+    try {
+      const fd = new FormData(e.currentTarget);
 
-    const result = await signIn("credentials", {
-      email: fd.get("email"),
-      password: fd.get("password"),
-      redirect: false,
-    });
+      const result = await signIn("credentials", {
+        email: fd.get("email"),
+        password: fd.get("password"),
+        redirect: false,
+      });
 
-    setLoading(false);
+      if (result?.error) {
+        toast.error("Invalid email or password.");
+        return;
+      }
 
-    if (result?.error) {
-      toast.error("Invalid email or password.");
-      return;
+      router.push("/");
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Sign in failed.");
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/");
-    router.refresh();
   }
 
   return (
