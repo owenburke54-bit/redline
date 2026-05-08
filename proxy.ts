@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/auth";
 
 const PUBLIC_PATHS = ["/login", "/register", "/api/auth"];
 
@@ -9,13 +9,13 @@ export async function proxy(req: NextRequest) {
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
   if (isPublic) return NextResponse.next();
 
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const session = await auth();
 
-  if (!token) {
+  if (!session) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  const onboardingComplete = token.onboardingComplete as boolean | undefined;
+  const onboardingComplete = (session.user as { onboardingComplete?: boolean }).onboardingComplete;
 
   if (
     !onboardingComplete &&
