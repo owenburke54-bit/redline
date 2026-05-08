@@ -11,6 +11,7 @@ const registerSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("[register] DATABASE_URL:", process.env.DATABASE_URL?.replace(/:[^@]+@/, ":***@") ?? "UNDEFINED");
     const body = await req.json();
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
