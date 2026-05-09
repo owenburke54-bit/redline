@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,7 +56,6 @@ interface Props {
 }
 
 export function OnboardingFlow({ userId: _userId, userName }: Props) {
-  const { update } = useSession();
   const [step, setStep] = useState<Step>("profile");
   const [loading, setLoading] = useState(false);
 
@@ -185,7 +183,6 @@ export function OnboardingFlow({ userId: _userId, userName }: Props) {
         throw new Error(msg);
       }
       toast.success("You're all set. Generating your plan…");
-      await update();
       window.location.href = "/";
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to complete setup.");

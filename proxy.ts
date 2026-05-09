@@ -10,20 +10,7 @@ export async function proxy(req: NextRequest) {
   if (isPublic) return NextResponse.next();
 
   const session = await auth();
-
-  if (!session) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
-
-  const onboardingComplete = (session.user as { onboardingComplete?: boolean }).onboardingComplete;
-
-  if (
-    !onboardingComplete &&
-    !pathname.startsWith("/onboarding") &&
-    !pathname.startsWith("/api/onboarding")
-  ) {
-    return NextResponse.redirect(new URL("/onboarding", req.url));
-  }
+  if (!session) return NextResponse.redirect(new URL("/login", req.url));
 
   return NextResponse.next();
 }
