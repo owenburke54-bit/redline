@@ -144,7 +144,7 @@ export default async function ProgressPage() {
           icon={<TrendingUp className="h-4 w-4" />}
           label="This week"
           value={thisWeekMi > 0 ? `${thisWeekMi.toFixed(0)} mi` : `${currentWeekData.planned} sessions`}
-          sub={thisWeekKm > 0 ? "planned volume" : "planned"}
+          sub={thisWeekMi > 0 ? "planned volume" : "planned"}
         />
         <StatCard
           icon={<CheckCircle2 className="h-4 w-4" />}
