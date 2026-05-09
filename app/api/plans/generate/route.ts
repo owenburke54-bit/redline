@@ -97,8 +97,67 @@ export async function POST(req: NextRequest) {
     console.error("AI plan generation failed:", err);
   }
 
+  // Conflict resolution: check existing workouts from other plans
+  const existingWorkouts = await db.workout.findMany({
+    where: { userId },
+    select: { id: true, scheduledDate: true, type: true, targetDistance: true, intensityZone: true },
+  });
+
+  const RUN_TYPES = new Set(["EASY_RUN", "LONG_RUN", "TEMPO", "INTERVALS", "RACE"]);
+  const COMPLEMENTARY_TYPES = new Set(["HYROX_STATION_WORK", "STRENGTH", "HYROX_SIM"]);
+
+  const existingByDate = new Map<string, (typeof existingWorkouts[0])[]>();
+  for (const w of existingWorkouts) {
+    const key = w.scheduledDate.toISOString().split("T")[0];
+    if (!existingByDate.has(key)) existingByDate.set(key, []);
+    existingByDate.get(key)!.push(w);
+  }
+
+  const filteredWorkouts: typeof builtPlan.workouts = [];
+  const idsToDelete: string[] = [];
+
+  for (const w of builtPlan.workouts) {
+    const key = new Date(w.scheduledDate).toISOString().split("T")[0];
+    const dayExisting = existingByDate.get(key) ?? [];
+    const dayNonRest = dayExisting.filter(e => e.type !== "REST");
+
+    if (dayNonRest.length === 0) {
+      filteredWorkouts.push(w);
+      continue;
+    }
+
+    if (w.type === "REST" || w.type === "CROSS_TRAIN") continue;
+
+    if (COMPLEMENTARY_TYPES.has(w.type)) {
+      filteredWorkouts.push(w);
+      continue;
+    }
+
+    if (RUN_TYPES.has(w.type)) {
+      const existingRun = dayNonRest.find(e => RUN_TYPES.has(e.type));
+      if (!existingRun) {
+        filteredWorkouts.push(w);
+      } else {
+        const newScore = (w.targetDistance ?? 0) * 10 + (w.intensityZone ?? 0);
+        const exScore = (existingRun.targetDistance ?? 0) * 10 + (existingRun.intensityZone ?? 0);
+        if (newScore > exScore) {
+          idsToDelete.push(existingRun.id);
+          filteredWorkouts.push(w);
+        }
+        // else: keep existing run, skip new
+      }
+      continue;
+    }
+
+    filteredWorkouts.push(w);
+  }
+
   // Persist plan and workouts in a transaction
   const plan = await db.$transaction(async (tx) => {
+    if (idsToDelete.length > 0) {
+      await tx.workout.deleteMany({ where: { id: { in: idsToDelete } } });
+    }
+
     const newPlan = await tx.trainingPlan.create({
       data: {
         userId,
@@ -113,7 +172,7 @@ export async function POST(req: NextRequest) {
     });
 
     await tx.workout.createMany({
-      data: builtPlan.workouts.map(w => ({
+      data: filteredWorkouts.map(w => ({
         userId,
         planId: newPlan.id,
         scheduledDate: new Date(w.scheduledDate),

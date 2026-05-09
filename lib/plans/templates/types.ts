@@ -15,7 +15,7 @@ export interface TemplateWorkout {
   type: WorkoutType;
   title: string;
   description: string;
-  targetDistance?: number; // km
+  targetDistance?: number; // miles
   targetDuration?: number; // minutes
   targetPace?: string;
   intensityZone?: number; // 1-5
@@ -34,7 +34,7 @@ export interface HyroxStation {
 export interface TemplateWeek {
   week: number;
   phase: string; // "Base" | "Build" | "Peak" | "Taper" | "Race"
-  totalKm: number;
+  totalMi: number;
   workouts: TemplateWorkout[];
 }
 

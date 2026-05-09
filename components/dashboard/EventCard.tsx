@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, MapPin, Target, Zap, Loader2 } from "lucide-react";
+import { Trophy, MapPin, Target, Zap, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +56,31 @@ export function EventCard({ event }: EventCardProps) {
     }
   }
 
+  async function regeneratePlan() {
+    if (!event.planId) return;
+    setGenerating(true);
+    try {
+      const delRes = await fetch(`/api/plans/${event.planId}`, { method: "DELETE" });
+      if (!delRes.ok) {
+        const d = await delRes.json();
+        throw new Error(d.error ?? "Failed to delete plan");
+      }
+      const genRes = await fetch("/api/plans/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: event.id }),
+      });
+      const data = await genRes.json();
+      if (!genRes.ok) throw new Error(data.error ?? "Failed to generate plan");
+      toast.success("Plan regenerated.");
+      window.location.reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to regenerate plan.");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   return (
     <div className="rounded border border-border bg-card p-5">
       <div className="flex items-start justify-between gap-4">
@@ -102,11 +127,26 @@ export function EventCard({ event }: EventCardProps) {
 
       <div className="mt-4 flex items-center gap-3">
         {event.hasPlan ? (
-          <Link href={`/calendar?event=${event.id}`}>
-            <Button size="sm" variant="outline" className="gap-1.5 text-xs">
-              <Zap className="h-3 w-3" /> View Plan
+          <>
+            <Link href={`/calendar?event=${event.id}`}>
+              <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+                <Zap className="h-3 w-3" /> View Plan
+              </Button>
+            </Link>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={regeneratePlan}
+              disabled={generating}
+              className="gap-1.5 text-xs text-muted-foreground"
+            >
+              {generating ? (
+                <><Loader2 className="h-3 w-3 animate-spin" /> Regenerating…</>
+              ) : (
+                <><RefreshCw className="h-3 w-3" /> Regenerate</>
+              )}
             </Button>
-          </Link>
+          </>
         ) : (
           <Button
             size="sm"

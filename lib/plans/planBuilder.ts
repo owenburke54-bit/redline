@@ -118,7 +118,7 @@ export function getTemplate(key: PlanTemplateKey): PlanTemplateData {
 export function summarizePlanForAI(plan: BuiltPlan): string {
   const weekSummaries = plan.weeks.map(w => {
     const types = w.workouts.map(wo => wo.title).join(", ");
-    return `Week ${w.week} (${w.phase}, ${w.totalKm}km): ${types}`;
+    return `Week ${w.week} (${w.phase}, ${w.totalMi}mi): ${types}`;
   });
   return weekSummaries.join("\n");
 }
