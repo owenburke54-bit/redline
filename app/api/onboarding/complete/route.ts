@@ -17,6 +17,11 @@ const schema = z.object({
   events: z.array(eventSchema).min(1),
 });
 
+function parseDateUTC(dateStr: string): Date {
+  // Store at noon UTC so no US timezone can shift the displayed date back a day
+  return new Date(dateStr + "T12:00:00Z");
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -29,6 +34,11 @@ export async function POST(req: NextRequest) {
     const userId = session.user.id as string;
     const { events } = parsed.data;
 
+    // Idempotent: clear existing events without plans before creating new ones
+    await db.event.deleteMany({
+      where: { userId, plan: null },
+    });
+
     await db.$transaction([
       ...events.map((ev) =>
         db.event.create({
@@ -36,7 +46,7 @@ export async function POST(req: NextRequest) {
             userId,
             name: ev.name,
             type: ev.type,
-            date: new Date(ev.date),
+            date: parseDateUTC(ev.date),
             location: ev.location,
             goalTime: ev.goalTime,
             priority: ev.priority,

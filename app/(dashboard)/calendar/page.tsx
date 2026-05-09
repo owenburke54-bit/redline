@@ -9,22 +9,10 @@ export default async function CalendarPage() {
 
   const now = new Date();
   const weekStart = getMonday(now);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 6);
-  weekEnd.setHours(23, 59, 59, 999);
-
-  // Load 8 weeks of workouts centered on current week
-  const rangeStart = new Date(weekStart);
-  rangeStart.setDate(rangeStart.getDate() - 7);
-  const rangeEnd = new Date(weekStart);
-  rangeEnd.setDate(rangeEnd.getDate() + 6 * 7);
 
   const [workouts, events] = await Promise.all([
     db.workout.findMany({
-      where: {
-        userId,
-        scheduledDate: { gte: rangeStart, lte: rangeEnd },
-      },
+      where: { userId },
       include: {
         plan: { include: { event: true } },
       },
