@@ -102,10 +102,13 @@ export function CalendarView({ workouts, currentWeekStart }: CalendarViewProps) 
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Calendar</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-2">
+            Training
+          </p>
+          <h1 className="text-[2rem] font-black tracking-tight leading-none">Calendar</h1>
+          <p className="text-[13px] text-muted-foreground mt-2">
             {formatMonthRange(weekStart, weekEnd)}
           </p>
         </div>
@@ -117,7 +120,7 @@ export function CalendarView({ workouts, currentWeekStart }: CalendarViewProps) 
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevWeek}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" className="h-8 text-xs px-2.5" onClick={goToday}>
+            <Button variant="outline" size="sm" className="h-8 text-[12px] px-2.5" onClick={goToday}>
               Today
             </Button>
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextWeek}>
@@ -188,10 +191,10 @@ export function CalendarView({ workouts, currentWeekStart }: CalendarViewProps) 
 
       {/* Empty state */}
       {workouts.length === 0 && (
-        <div className="rounded border border-dashed border-border p-16 text-center mt-4">
-          <Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-          <p className="font-medium text-sm">No workouts scheduled</p>
-          <p className="text-xs text-muted-foreground mt-1">
+        <div className="rounded-xl border border-dashed border-border/40 p-16 text-center mt-4">
+          <Calendar className="h-7 w-7 text-muted-foreground/20 mx-auto mb-4" />
+          <p className="font-semibold text-[13px]">No workouts scheduled</p>
+          <p className="text-[11px] text-muted-foreground mt-1.5">
             Generate a plan from your Events page to populate your calendar.
           </p>
         </div>

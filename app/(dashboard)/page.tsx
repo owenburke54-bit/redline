@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { daysUntil, formatDate } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { Trophy, Zap, MessageSquare, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
@@ -28,51 +27,68 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="space-y-8 max-w-4xl">
-      {/* Header */}
+    <div className="max-w-3xl space-y-12">
+      {/* Greeting */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {getGreeting()}, {user?.name?.split(" ")[0] ?? "Athlete"}.
+        <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/50 uppercase mb-2">
+          {getTimeOfDay()}
+        </p>
+        <h1 className="text-[3.25rem] font-black tracking-tight leading-none text-foreground">
+          {user?.name?.split(" ")[0] ?? "Athlete"}.
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Dedication level:{" "}
-          <span className="text-primary font-semibold">{user?.dedicationScore}/10</span>
+        <p className="text-[13px] text-muted-foreground mt-4">
+          Dedication score —{" "}
+          <span className="text-primary font-bold">{user?.dedicationScore}/10</span>
         </p>
       </div>
 
-      {/* Events countdown */}
+      {/* Upcoming events */}
       {events.length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+          <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-4">
             Upcoming Events
-          </h2>
+          </p>
           <div className="grid gap-3 sm:grid-cols-2">
             {events.map((event) => {
               const days = daysUntil(event.date);
               const isHyrox = event.type.startsWith("HYROX");
+              const color = isHyrox ? "var(--hyrox-color)" : "var(--marathon-color)";
               return (
                 <div
                   key={event.id}
-                  className="rounded border border-border bg-card p-4 flex items-start justify-between"
+                  className="rounded-xl bg-card overflow-hidden"
                 >
-                  <div className="flex items-center gap-3">
-                    <Trophy
-                      className="h-4 w-4 shrink-0 mt-0.5"
-                      style={{ color: isHyrox ? "var(--hyrox-color)" : "var(--marathon-color)" }}
-                    />
-                    <div>
-                      <p className="font-medium text-sm">{event.name}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(event.date)}</p>
-                      {event.goalTime && (
-                        <p className="text-xs text-muted-foreground">Goal: {event.goalTime}</p>
-                      )}
+                  <div className="h-[3px]" style={{ backgroundColor: color }} />
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 pt-0.5">
+                        <p className="font-semibold text-[13px] text-foreground leading-tight truncate">
+                          {event.name}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          {formatDate(event.date)}
+                        </p>
+                        {event.goalTime && (
+                          <p
+                            className="text-[11px] font-semibold mt-2.5"
+                            style={{ color }}
+                          >
+                            Goal: {event.goalTime}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p
+                          className="text-[3rem] font-black tabular-nums leading-none"
+                          style={{ color }}
+                        >
+                          {days}
+                        </p>
+                        <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase mt-1">
+                          days
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-2xl font-bold tabular-nums leading-none" style={{ color: isHyrox ? "var(--hyrox-color)" : "var(--marathon-color)" }}>
-                      {days}
-                    </p>
-                    <p className="text-xs text-muted-foreground">days</p>
                   </div>
                 </div>
               );
@@ -81,19 +97,23 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* Coach prompt — only show when they have events */}
+      {/* Coach CTA */}
       {events.length > 0 && (
         <section>
           <Link href="/coach">
-            <div className="rounded border border-primary/20 bg-primary/5 p-4 hover:bg-primary/10 transition-colors cursor-pointer flex items-center gap-4">
-              <MessageSquare className="h-4 w-4 text-primary shrink-0" />
+            <div className="group rounded-xl border border-border bg-card p-5 hover:border-primary/25 hover:bg-primary/[0.025] transition-all duration-200 flex items-center gap-4 cursor-pointer">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                <MessageSquare className="h-4 w-4 text-primary" />
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Talk to your AI coach</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Discuss your goals, strength plan, other sports, and what to expect from training.
+                <p className="text-[13px] font-semibold text-foreground">
+                  Talk to your AI coach
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                  Discuss goals, strength programming, and race strategy.
                 </p>
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
             </div>
           </Link>
         </section>
@@ -101,38 +121,49 @@ export default async function DashboardPage() {
 
       {/* Today's workouts */}
       <section>
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+        <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-4">
           Today
-        </h2>
+        </p>
         {todayWorkouts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No workouts scheduled today.</p>
+          <p className="text-[13px] text-muted-foreground">
+            No workouts scheduled today.
+          </p>
         ) : (
           <div className="space-y-2">
             {todayWorkouts.map((w) => {
               const isHyrox = w.plan.event.type.startsWith("HYROX");
+              const color = isHyrox ? "var(--hyrox-color)" : "var(--marathon-color)";
+              const completed = w.status === "COMPLETED";
               return (
                 <div
                   key={w.id}
-                  className="flex items-center gap-4 rounded border border-border bg-card px-4 py-3"
+                  className="relative flex items-center gap-4 rounded-xl bg-card px-5 py-4 overflow-hidden"
                 >
+                  <span
+                    className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full"
+                    style={{ backgroundColor: color }}
+                  />
                   <Zap
-                    className="h-4 w-4 shrink-0"
-                    style={{ color: isHyrox ? "var(--hyrox-color)" : "var(--marathon-color)" }}
+                    className="h-4 w-4 shrink-0 ml-2"
+                    style={{ color }}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{w.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{w.plan.event.name}</p>
+                    <p className="text-[13px] font-semibold truncate">{w.title}</p>
+                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                      {w.plan.event.name}
+                    </p>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="text-xs shrink-0"
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-wider shrink-0 px-2.5 py-1 rounded-full"
                     style={{
-                      borderColor: w.status === "COMPLETED" ? "var(--hyrox-color)" : "var(--border)",
-                      color: w.status === "COMPLETED" ? "var(--hyrox-color)" : "var(--muted-foreground)",
+                      color: completed ? color : "var(--muted-foreground)",
+                      backgroundColor: completed
+                        ? "rgba(163,230,53,0.1)"
+                        : "rgba(255,255,255,0.04)",
                     }}
                   >
                     {w.status.toLowerCase()}
-                  </Badge>
+                  </span>
                 </div>
               );
             })}
@@ -142,10 +173,10 @@ export default async function DashboardPage() {
 
       {/* Empty state */}
       {events.length === 0 && (
-        <div className="rounded border border-dashed border-border p-10 text-center">
-          <Trophy className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-          <p className="font-medium text-sm">No events yet</p>
-          <p className="text-xs text-muted-foreground mt-1">
+        <div className="rounded-xl border border-dashed border-border/40 p-16 text-center">
+          <Trophy className="h-7 w-7 text-muted-foreground/20 mx-auto mb-4" />
+          <p className="font-semibold text-[13px] text-foreground">No events yet</p>
+          <p className="text-[11px] text-muted-foreground mt-1.5">
             Add your first race to generate a training plan.
           </p>
         </div>
@@ -154,9 +185,9 @@ export default async function DashboardPage() {
   );
 }
 
-function getGreeting(): string {
+function getTimeOfDay(): string {
   const h = new Date().getHours();
-  if (h < 12) return "Morning";
-  if (h < 17) return "Afternoon";
-  return "Evening";
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
 }

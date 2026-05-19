@@ -15,10 +15,13 @@ export default async function CoachPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="shrink-0 mb-4">
-        <h1 className="text-xl font-bold">AI Coach</h1>
+      <div className="shrink-0 mb-6">
+        <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-2">
+          Training
+        </p>
+        <h1 className="text-[2rem] font-black tracking-tight leading-none">AI Coach</h1>
         {events.length > 0 && (
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[11px] text-muted-foreground mt-2">
             {events.map(e => `${e.name} — ${daysUntil(e.date)} days out`).join("  ·  ")}
           </p>
         )}

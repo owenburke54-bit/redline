@@ -16,11 +16,14 @@ export default async function EventsPage() {
   });
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 max-w-3xl">
+      <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Events</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-2">
+            Racing
+          </p>
+          <h1 className="text-[2rem] font-black tracking-tight leading-none">Events</h1>
+          <p className="text-[13px] text-muted-foreground mt-2">
             {events.length} active {events.length === 1 ? "event" : "events"}
           </p>
         </div>
@@ -28,13 +31,13 @@ export default async function EventsPage() {
       </div>
 
       {events.length === 0 ? (
-        <div className="rounded border border-dashed border-border p-12 text-center">
-          <Trophy className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-          <p className="font-medium text-sm">No events yet</p>
-          <p className="text-xs text-muted-foreground mt-1">Add a race to generate your training plan.</p>
+        <div className="rounded-xl border border-dashed border-border/40 p-16 text-center">
+          <Trophy className="h-7 w-7 text-muted-foreground/20 mx-auto mb-4" />
+          <p className="font-semibold text-[13px]">No events yet</p>
+          <p className="text-[11px] text-muted-foreground mt-1.5">Add a race to generate your training plan.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {events.map(event => (
             <EventCard
               key={event.id}

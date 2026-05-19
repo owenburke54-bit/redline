@@ -6,24 +6,24 @@
 :root {
   --background: #0d0d0d;
   --foreground: #f0f0f0;
-  --card: #141414;
+  --card: #1a1a1a;
   --card-foreground: #f0f0f0;
-  --popover: #1a1a1a;
+  --popover: #1f1f1f;
   --popover-foreground: #f0f0f0;
   --primary: #f97316;
   --primary-foreground: #0d0d0d;
-  --secondary: #1f1f1f;
+  --secondary: #222222;
   --secondary-foreground: #f0f0f0;
   --muted: #1a1a1a;
-  --muted-foreground: #6b6b6b;
+  --muted-foreground: #888888;
   --accent: #f97316;
   --accent-foreground: #0d0d0d;
   --destructive: #ef4444;
   --destructive-foreground: #f0f0f0;
-  --border: #2a2a2a;
-  --input: #1f1f1f;
+  --border: #252525;
+  --input: #222222;
   --ring: #f97316;
-  --radius: 0.375rem;
+  --radius: 0.5rem;
 
   /* Event type colors */
   --marathon-color: #f97316;
