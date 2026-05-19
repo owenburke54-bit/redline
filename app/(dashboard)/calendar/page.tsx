@@ -40,6 +40,7 @@ export default async function CalendarPage() {
     conflictNote: w.conflictNote,
     eventType: w.plan.event.type,
     eventName: w.plan.event.name,
+    goalTime: w.plan.event.goalTime,
     planId: w.planId,
   }));
 

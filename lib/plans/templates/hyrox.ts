@@ -28,7 +28,7 @@ function build8WeekHyrox(): TemplateWeek[] {
       workouts: [
         { day: 0, type: "EASY_RUN", title: "Easy Run 3mi", description: "Easy zone 2 run to start the week.", targetDistance: 3, intensityZone: 2 },
         { day: 1, type: "HYROX_STATION_WORK", title: "Station Work: SkiErg + Farmers Carry", description: "4x500m SkiErg @ moderate pace, 2min rest between. Then 4x50m Farmers Carry (2x24kg). Focus on form.", intensityZone: 3 },
-        { day: 2, type: "STRENGTH", title: "Strength", description: "Squats 4x8, Deadlifts 3x8, Pull-ups 3x max, Box jumps 3x10. General strength foundation.", intensityZone: 3 },
+        { day: 2, type: "STRENGTH", title: "Strength: Pull & Hinge", description: "Trap bar deadlift 4x8 (moderate). Pull-ups or lat pulldown 4x8. Single-arm DB row 3x10/side. Farmers carry 4x30m (heavy). Core: Dead bug 3x10. These movements directly transfer to SkiErg, rowing, and sled pull.", intensityZone: 3 },
         { day: 3, type: "TEMPO", title: "Tempo Run 3mi", description: "3mi at comfortably hard pace (zone 4). This is your running base builder.", targetDistance: 3, intensityZone: 4 },
         { day: 4, type: "REST", title: "Rest", description: "Full rest day." },
         { day: 5, type: "HYROX_STATION_WORK", title: "Station Work: Sled + Wall Balls", description: "Sled push 6x20m (bodyweight on sled). Sled pull 6x20m. Wall balls 5x15 reps (4kg). Rest 90s between sets.", intensityZone: 4 },
@@ -41,7 +41,7 @@ function build8WeekHyrox(): TemplateWeek[] {
       workouts: [
         { day: 0, type: "EASY_RUN", title: "Easy Run 3mi", description: "Easy zone 2.", targetDistance: 3, intensityZone: 2 },
         { day: 1, type: "HYROX_STATION_WORK", title: "Station Work: Rowing + Sandbag Lunges", description: "3x500m rowing @ 2:10/500m target. Then sandbag lunges 4x20m (20kg). Rest 2min between efforts.", intensityZone: 3 },
-        { day: 2, type: "STRENGTH", title: "Strength", description: "Romanian deadlifts 4x10, KB swings 4x15, Step-ups 3x12 each, Pull-ups 3x max.", intensityZone: 3 },
+        { day: 2, type: "STRENGTH", title: "Strength: Push & Squat", description: "Goblet squat 4x10. Overhead press 4x10. DB walking lunges 4x12/leg. Box jumps 3x6 (explosive, full reset between reps). Core: Hollow body hold 3x30s. Targets sled push, wall ball, and sandbag lunge mechanics.", intensityZone: 3 },
         { day: 3, type: "TEMPO", title: "Tempo Run 3mi", description: "Zone 4 tempo run.", targetDistance: 3, intensityZone: 4 },
         { day: 4, type: "REST", title: "Rest", description: "Rest day." },
         { day: 5, type: "HYROX_STATION_WORK", title: "Station Work: Burpee Broad Jumps + SkiErg", description: "Burpee broad jumps 4x20m. Rest 2min. SkiErg 3x750m at race pace effort. Rest 3min.", intensityZone: 4 },
@@ -54,7 +54,7 @@ function build8WeekHyrox(): TemplateWeek[] {
       workouts: [
         { day: 0, type: "EASY_RUN", title: "Easy Run 3mi", description: "Zone 2 opener.", targetDistance: 3, intensityZone: 2 },
         { day: 1, type: "HYROX_STATION_WORK", title: "Station Work: Full Sled Circuit", description: "Sled push 4x30m (bodyweight). Sled pull 4x30m (half bodyweight). 3min rest between. Add a 400m run between sled sets.", intensityZone: 4 },
-        { day: 2, type: "STRENGTH", title: "Strength", description: "Back squat 5x5 (heavy), Weighted pull-ups 4x6, Leg press 3x12, KB swings 4x20.", intensityZone: 4 },
+        { day: 2, type: "STRENGTH", title: "Strength: Pull & Hinge (Heavy)", description: "Deadlift 4x5 (heavier than week 1). Weighted pull-ups 4x5. Single-arm row 4x8/side. Farmers carry 4x40m (race weight target). Core: Copenhagen plank 3x20s/side. Progressive overload — add 5-10lb to each lift from week 1.", intensityZone: 4 },
         { day: 3, type: "INTERVALS", title: "Run Intervals 3mi", description: "6x400m at 5K effort with 400m jog recovery. Total ~3mi.", targetDistance: 3, intensityZone: 5 },
         { day: 4, type: "REST", title: "Rest", description: "Rest day." },
         { day: 5, type: "HYROX_STATION_WORK", title: "Station Work: Rowing + Farmers + Wall Balls", description: "3x(500m row + 50m farmers carry + 20 wall balls). Rest 3min between rounds.", intensityZone: 4 },
@@ -80,7 +80,7 @@ function build8WeekHyrox(): TemplateWeek[] {
       workouts: [
         { day: 0, type: "EASY_RUN", title: "Easy Run 4mi", description: "Zone 2.", targetDistance: 4, intensityZone: 2 },
         { day: 1, type: "HYROX_STATION_WORK", title: "Station Work: Sled + Burpees", description: "Sled push 5x30m (bodyweight). 2min rest. Burpee broad jumps 5x20m. 2min rest. Repeat twice.", intensityZone: 4 },
-        { day: 2, type: "STRENGTH", title: "Strength (Heavy)", description: "Squat 5x3 (heavy), Deadlift 4x4, Weighted pull-ups 4x5, Box jumps 4x8.", intensityZone: 4 },
+        { day: 2, type: "STRENGTH", title: "Strength: Power Day", description: "Trap bar deadlift 3x3 (90% 1RM). Weighted pull-ups 5x3 (heavy). Broad jumps 4x5 (max effort, full reset). Sled push 3x15m if available. Core: Pallof press 3x12/side. Short rests — this session is about power output, not volume.", intensityZone: 4 },
         { day: 3, type: "INTERVALS", title: "Run Intervals 4mi", description: "8x400m at 5K pace. 90s rest between. Total ~4mi.", targetDistance: 4, intensityZone: 5 },
         { day: 4, type: "REST", title: "Rest", description: "Rest." },
         { day: 5, type: "HYROX_STATION_WORK", title: "Station Work: Full Circuit", description: "1km run + SkiErg 1000m + 1km run + Rowing 1000m + 1km run + Wall Balls 50 reps. Race pace effort.", intensityZone: 5 },
@@ -93,7 +93,7 @@ function build8WeekHyrox(): TemplateWeek[] {
       workouts: [
         { day: 0, type: "EASY_RUN", title: "Easy Run 4mi", description: "Zone 2.", targetDistance: 4, intensityZone: 2 },
         { day: 1, type: "HYROX_STATION_WORK", title: "Station Work: Sled + Sandbag (Race Weight)", description: "Sled push 4x50m at race weight. Sled pull 4x50m. 3min rest. Sandbag lunges 4x25m (race weight).", intensityZone: 4 },
-        { day: 2, type: "STRENGTH", title: "Strength", description: "Squat 4x6, Deadlift 4x6, Pull-ups 4x max, KB swings 5x20.", intensityZone: 4 },
+        { day: 2, type: "STRENGTH", title: "Strength: Push & Squat (Heavy)", description: "Front squat 4x5 (heavy). Overhead press 4x6. DB walking lunges 4x10/leg (heavy). Box jumps 4x5 (max height). Core: Plank to push-up 3x10. Peak push day — heavier than week 2.", intensityZone: 4 },
         { day: 3, type: "TEMPO", title: "Tempo Run 4mi", description: "Zone 4 tempo run.", targetDistance: 4, intensityZone: 4 },
         { day: 4, type: "REST", title: "Rest", description: "Rest." },
         { day: 5, type: "HYROX_SIM", title: "Full Hyrox Sim", description: "Full race simulation — all 8 stations at race effort. Time yourself. This is your benchmark.", stations: HYROX_SIM_STATIONS, isHyroxSim: true, intensityZone: 5 },
@@ -106,7 +106,7 @@ function build8WeekHyrox(): TemplateWeek[] {
       workouts: [
         { day: 0, type: "EASY_RUN", title: "Easy Run 3mi", description: "Taper begins. Keep it easy.", targetDistance: 3, intensityZone: 2 },
         { day: 1, type: "HYROX_STATION_WORK", title: "Station Work: Light SkiErg + Carries", description: "2x500m SkiErg (moderate). 2x50m farmers carry. Keep it short — you're sharpening, not building.", intensityZone: 3 },
-        { day: 2, type: "STRENGTH", title: "Strength (Light)", description: "Squat 3x5 (60%), Pull-ups 3x5, Box jumps 3x5. Short and sharp.", intensityZone: 3 },
+        { day: 2, type: "STRENGTH", title: "Strength: Taper Session", description: "Pull-ups 3x5 (bodyweight). Goblet squat 3x6 (moderate). KB swings 3x10. Box jumps 3x4. 60-70% effort. Move well, feel sharp. Under 30 minutes — done.", intensityZone: 3 },
         { day: 3, type: "TEMPO", title: "Short Tempo 2.5mi", description: "2.5mi tempo run. Stay sharp.", targetDistance: 2.5, intensityZone: 4 },
         { day: 4, type: "REST", title: "Rest", description: "Rest." },
         { day: 5, type: "HYROX_STATION_WORK", title: "Race Pace Openers", description: "Run 2x1km at race pace. 2x200m SkiErg at race pace. That's it. Stay fresh.", intensityZone: 4 },
@@ -139,7 +139,7 @@ function build16WeekHyrox(): TemplateWeek[] {
       workouts: [
         { day: 0, type: "EASY_RUN", title: "Easy Run 3mi", description: "Zone 2 base building.", targetDistance: 3, intensityZone: 2 },
         { day: 1, type: "HYROX_STATION_WORK", title: "Station Intro: SkiErg", description: "Learn the SkiErg. 5x300m with 2min rest. Focus on technique — arm drive, hip hinge.", intensityZone: 2 },
-        { day: 2, type: "STRENGTH", title: "Strength Foundation", description: "Squat 3x10, Deadlift 3x10, Pull-ups 3x8, Lunges 3x12 each. Base strength.", intensityZone: 3 },
+        { day: 2, type: "STRENGTH", title: "Strength: Foundation A (Pull)", description: "Deadlift 3x10 (moderate — form focus). Ring rows or pull-ups 3x8. KB row 3x12/side. Farmers carry 3x30m (light). Core: Dead bug 3x8 each side. These 16 weeks start with movement quality, not load.", intensityZone: 3 },
         { day: 3, type: "EASY_RUN", title: "Easy Run 3mi", description: "Easy zone 2.", targetDistance: 3, intensityZone: 2 },
         { day: 4, type: "REST", title: "Rest", description: "Rest." },
         { day: 5, type: "HYROX_STATION_WORK", title: "Station Intro: Farmers Carry + Wall Balls", description: "Farmers carry 4x50m (light). Wall balls 4x10 (light). Get comfortable with the movements.", intensityZone: 2 },
@@ -151,7 +151,7 @@ function build16WeekHyrox(): TemplateWeek[] {
       workouts: [
         { day: 0, type: "EASY_RUN", title: "Easy Run 3mi", description: "Zone 2.", targetDistance: 3, intensityZone: 2 },
         { day: 1, type: "HYROX_STATION_WORK", title: "Station Work: Rowing", description: "5x400m rowing at moderate pace. Focus on technique — drive with legs, not arms. Rest 90s.", intensityZone: 3 },
-        { day: 2, type: "STRENGTH", title: "Strength", description: "Squat 4x8, Deadlift 3x8, KB swings 4x15, Pull-ups 3x max.", intensityZone: 3 },
+        { day: 2, type: "STRENGTH", title: "Strength: Foundation B (Push/Squat)", description: "Goblet squat 4x10. DB overhead press 3x10. Walking lunges 3x12/leg. Box step-ups 3x12/leg (controlled). Core: Plank 3x45s. Building the press and squat base that wall balls and sled push demand.", intensityZone: 3 },
         { day: 3, type: "EASY_RUN", title: "Easy Run 3mi", description: "Zone 2.", targetDistance: 3, intensityZone: 2 },
         { day: 4, type: "REST", title: "Rest", description: "Rest." },
         { day: 5, type: "HYROX_STATION_WORK", title: "Station Work: Sled Intro", description: "Sled push 4x20m (light). Sled pull 4x20m (light). Learn the movement — stay low, drive through the hips.", intensityZone: 3 },
@@ -163,7 +163,7 @@ function build16WeekHyrox(): TemplateWeek[] {
       workouts: [
         { day: 0, type: "EASY_RUN", title: "Easy Run 3mi", description: "Zone 2.", targetDistance: 3, intensityZone: 2 },
         { day: 1, type: "HYROX_STATION_WORK", title: "Station Work: SkiErg + Rowing", description: "3x(500m SkiErg + 500m row). 3min rest between rounds. Pace: moderate.", intensityZone: 3 },
-        { day: 2, type: "STRENGTH", title: "Strength", description: "Squat 4x8, Romanian deadlift 4x10, Step-ups 3x12, Pull-ups 3x max.", intensityZone: 3 },
+        { day: 2, type: "STRENGTH", title: "Strength: Pull & Hinge", description: "Romanian deadlift 4x10 (hamstring focus). Pull-ups 4x6. Single-arm row 3x10/side. Farmers carry 3x40m. Core: Copenhagen plank 3x15s/side. Hamstring loading is critical for sled pull — don't skip the RDL.", intensityZone: 3 },
         { day: 3, type: "TEMPO", title: "Tempo Run 3mi", description: "First tempo. Zone 4.", targetDistance: 3, intensityZone: 4 },
         { day: 4, type: "REST", title: "Rest", description: "Rest." },
         { day: 5, type: "HYROX_STATION_WORK", title: "Station Work: Sled + Burpee Broad Jumps", description: "Sled push 4x25m. Sled pull 4x25m. Burpee broad jumps 4x15m. Rest 2min between.", intensityZone: 3 },
@@ -178,7 +178,7 @@ function build16WeekHyrox(): TemplateWeek[] {
         { day: 2, type: "REST", title: "Rest", description: "Extra rest this week." },
         { day: 3, type: "EASY_RUN", title: "Easy Run 3mi", description: "Zone 2.", targetDistance: 3, intensityZone: 2 },
         { day: 4, type: "REST", title: "Rest", description: "Rest." },
-        { day: 5, type: "STRENGTH", title: "Strength", description: "Full body moderate session. No max effort.", intensityZone: 3 },
+        { day: 5, type: "STRENGTH", title: "Strength: Active Recovery", description: "Goblet squat 3x8 (light). Band-assisted pull-ups or ring rows 3x8. Band pull-aparts 3x20. Plank 3x45s. Mobility work: hip flexors, lats, thoracic. Cutback week — move the body, don't stress it.", intensityZone: 3 },
         { day: 6, type: "EASY_RUN", title: "Easy Run 3mi", description: "Short easy run.", targetDistance: 3, intensityZone: 2 },
       ],
     },
@@ -187,7 +187,7 @@ function build16WeekHyrox(): TemplateWeek[] {
       workouts: [
         { day: 0, type: "EASY_RUN", title: "Easy Run 3mi", description: "Zone 2.", targetDistance: 3, intensityZone: 2 },
         { day: 1, type: "HYROX_STATION_WORK", title: "Station Work: Farmers + Sandbag Lunges", description: "Farmers carry 4x50m (20kg each). Sandbag lunges 4x20m (15kg). Build carry capacity.", intensityZone: 3 },
-        { day: 2, type: "STRENGTH", title: "Strength (Building)", description: "Squat 5x5, Deadlift 4x5, Weighted pull-ups 3x6, KB swings 5x15.", intensityZone: 4 },
+        { day: 2, type: "STRENGTH", title: "Strength: Build Phase A (Pull)", description: "Trap bar deadlift 4x6 (adding load). Weighted pull-ups 3x5. Single-arm row 4x8/side. KB swings 4x15 (heavy). Farmers carry 4x40m. Core: Dead bug 3x12. Week-over-week loading — log every set.", intensityZone: 4 },
         { day: 3, type: "INTERVALS", title: "Run Intervals 3mi", description: "5x600m at 5K pace. 2min rest. Total ~3mi.", targetDistance: 3, intensityZone: 5 },
         { day: 4, type: "REST", title: "Rest", description: "Rest." },
         { day: 5, type: "HYROX_STATION_WORK", title: "Station Work: Sled (Race Weight)", description: "Sled push 4x30m (race weight). Sled pull 4x30m (race weight). 3min rest. This is the hard one.", intensityZone: 4 },
@@ -199,7 +199,7 @@ function build16WeekHyrox(): TemplateWeek[] {
       workouts: [
         { day: 0, type: "EASY_RUN", title: "Easy Run 4mi", description: "Zone 2.", targetDistance: 4, intensityZone: 2 },
         { day: 1, type: "HYROX_STATION_WORK", title: "Station Work: SkiErg Race Pace", description: "4x500m SkiErg at race pace. Full rest between. Then 3x300m faster than race pace.", intensityZone: 5 },
-        { day: 2, type: "STRENGTH", title: "Strength", description: "Squat 4x6, Deadlift 4x6, Pull-ups 4x max, Box jumps 4x8.", intensityZone: 4 },
+        { day: 2, type: "STRENGTH", title: "Strength: Build Phase B (Push/Squat)", description: "Front squat 4x6. Overhead press 4x8. DB walking lunges 4x10/leg (heavy). Box jumps 4x6 (explosive). Core: Hollow body hold 3x30s. Building power output for sled push and wall ball station.", intensityZone: 4 },
         { day: 3, type: "TEMPO", title: "Tempo Run 4mi", description: "Zone 4 tempo.", targetDistance: 4, intensityZone: 4 },
         { day: 4, type: "REST", title: "Rest", description: "Rest." },
         { day: 5, type: "HYROX_SIM", title: "Half Hyrox Sim", description: "Stations 1-8. Race effort. Time it.", stations: HYROX_SIM_STATIONS.slice(0, 8), isHyroxSim: true, intensityZone: 5 },
@@ -211,7 +211,7 @@ function build16WeekHyrox(): TemplateWeek[] {
       workouts: [
         { day: 0, type: "EASY_RUN", title: "Easy Run 4mi", description: "Zone 2.", targetDistance: 4, intensityZone: 2 },
         { day: 1, type: "HYROX_STATION_WORK", title: "Station Work: Full Carry Circuit", description: "3 rounds: 50m farmers carry + 25m sandbag lunge + 50m farmers carry. Rest 3min between rounds.", intensityZone: 4 },
-        { day: 2, type: "STRENGTH", title: "Strength (Peak)", description: "Squat 5x3 (heavy), Deadlift 4x3 (heavy), Weighted pull-ups 4x5.", intensityZone: 5 },
+        { day: 2, type: "STRENGTH", title: "Strength: Peak A (Pull & Power)", description: "Deadlift 4x3 (90% 1RM — heaviest week). Weighted pull-ups 4x4. Broad jumps 4x5 (max effort). Farmers carry 4x50m (race weight or heavier). Core: Pallof press 3x10/side. This is the top of the strength curve.", intensityZone: 5 },
         { day: 3, type: "INTERVALS", title: "Run Intervals 3mi", description: "8x400m at 5K pace. 90s rest.", targetDistance: 3, intensityZone: 5 },
         { day: 4, type: "REST", title: "Rest", description: "Rest." },
         { day: 5, type: "HYROX_STATION_WORK", title: "Station Work: Rowing + Wall Balls", description: "5x(500m row + 25 wall balls). Rest 2min. Push the wall balls — keep the ball high.", intensityZone: 4 },
@@ -223,7 +223,7 @@ function build16WeekHyrox(): TemplateWeek[] {
       workouts: [
         { day: 0, type: "EASY_RUN", title: "Easy Run 3mi", description: "Cutback week.", targetDistance: 3, intensityZone: 2 },
         { day: 1, type: "HYROX_STATION_WORK", title: "Station Work: Light SkiErg + Rowing", description: "3x500m SkiErg + 3x500m rowing at moderate pace. Cutback volume.", intensityZone: 3 },
-        { day: 2, type: "STRENGTH", title: "Strength (Moderate)", description: "Full body. 60% intensity. No max effort.", intensityZone: 3 },
+        { day: 2, type: "STRENGTH", title: "Strength: Cutback Week", description: "Pull-ups 4x5 (bodyweight). Goblet squat 3x8 (moderate). KB swings 3x15. Box step-ups 3x10/leg. No max effort — 60-70% intensity. Let last week's peak loading absorb.", intensityZone: 3 },
         { day: 3, type: "TEMPO", title: "Tempo Run 3mi", description: "Zone 4 tempo.", targetDistance: 3, intensityZone: 4 },
         { day: 4, type: "REST", title: "Rest", description: "Rest." },
         { day: 5, type: "HYROX_SIM", title: "Full Hyrox Sim", description: "Full race sim. All stations. Time it and compare to week 6 half sim benchmark.", stations: HYROX_SIM_STATIONS, isHyroxSim: true, intensityZone: 5 },

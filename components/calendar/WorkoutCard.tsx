@@ -91,7 +91,7 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
             {workout.targetDistance % 1 === 0
               ? workout.targetDistance
               : workout.targetDistance.toFixed(1)}{" "}
-            km
+            mi
           </span>
         )}
         {workout.targetDuration != null && (

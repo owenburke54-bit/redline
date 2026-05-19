@@ -2,7 +2,8 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { daysUntil, formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Zap } from "lucide-react";
+import { Trophy, Zap, MessageSquare, ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -77,6 +78,24 @@ export default async function DashboardPage() {
               );
             })}
           </div>
+        </section>
+      )}
+
+      {/* Coach prompt — only show when they have events */}
+      {events.length > 0 && (
+        <section>
+          <Link href="/coach">
+            <div className="rounded border border-primary/20 bg-primary/5 p-4 hover:bg-primary/10 transition-colors cursor-pointer flex items-center gap-4">
+              <MessageSquare className="h-4 w-4 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">Talk to your AI coach</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Discuss your goals, strength plan, other sports, and what to expect from training.
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </div>
+          </Link>
         </section>
       )}
 

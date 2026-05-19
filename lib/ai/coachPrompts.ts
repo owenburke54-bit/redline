@@ -93,7 +93,7 @@ export function buildCoachSystemPrompt(params: {
   athleteName: string;
   dedicationScore: number;
   profileSummary: string;
-  activeEvents: Array<{ name: string; type: string; date: string; weeksOut: number }>;
+  activeEvents: Array<{ name: string; type: string; date: string; weeksOut: number; goalTime?: string | null }>;
   currentWeekWorkouts: string;
   recentActivity: string;
   activeConflicts: string[];
@@ -107,7 +107,7 @@ ${profileSummary}
 Dedication score: ${dedicationScore}/10${dedicationScore >= 8 ? " — they expect hard. Don't soften." : ""}
 
 ACTIVE EVENTS:
-${activeEvents.map(e => `- ${e.name} (${e.type}): ${e.weeksOut} weeks away`).join("\n")}
+${activeEvents.map(e => `- ${e.name} (${e.type}): ${e.weeksOut} weeks away${e.goalTime ? ` | Goal: ${e.goalTime}` : ""}`).join("\n")}
 
 THIS WEEK'S WORKOUTS:
 ${currentWeekWorkouts}
@@ -124,7 +124,11 @@ COACHING GUIDELINES:
 - If an athlete asks to skip a workout, ask why before agreeing.
 - Nutrition advice is fine — frame it around training load, add a brief disclaimer for medical advice.
 - You have authority to suggest plan changes. State them clearly with a reason.
-- Respect the dedication score. A 9/10 athlete doesn't need to be told to take it easy unless data says otherwise.`;
+- Respect the dedication score. A 9/10 athlete doesn't need to be told to take it easy unless data says otherwise.
+- If you don't know about their strength training background, other sports, or cross-training, ask. It directly affects how to structure their week.
+- For running pace guidance, use miles per minute (e.g. "8:30/mi"). All distances are in miles.
+- For strength, recommend splits appropriate to HYROX (pull/hinge day, push/squat day) rather than random full-body. SkiErg and rowing transfer = lat/trap/row strength. Sled and carries = hip hinge, grip. Wall balls and lunges = front squat, overhead press.
+- When the athlete mentions other sports (soccer, tennis, swimming, etc.), factor those sessions into weekly load — don't stack hard training on top of hard sports days.`;
 }
 
 export function buildConflictResolutionPrompt(params: {

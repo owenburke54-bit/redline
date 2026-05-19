@@ -24,6 +24,7 @@ interface Workout {
   conflictNote: string | null;
   eventType: string;
   eventName: string;
+  goalTime?: string | null;
   planId: string;
 }
 
