@@ -54,9 +54,9 @@ export default async function DashboardPage() {
       include: { plan: { include: { event: true } } },
     }),
     db.whoopRecovery.findFirst({
-      where: { userId, date: { gte: todayStart } },
+      where: { userId, date: { gte: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) } },
       orderBy: { date: "desc" },
-      select: { recoveryScore: true, hrvRmssd: true, restingHr: true, sleepScore: true, sleepDuration: true },
+      select: { recoveryScore: true, hrvRmssd: true, restingHr: true, sleepScore: true, sleepDuration: true, date: true },
     }),
     db.whoopActivity.findMany({
       where: { userId, startDate: { gte: sevenDaysAgo }, sportName: { notIn: ["Running", "Cycling"] } },
@@ -94,67 +94,91 @@ export default async function DashboardPage() {
       </div>
 
       {/* WHOOP recovery */}
-      {whoopConnected && todayRecovery && (
+      {whoopConnected && (
         <section>
           <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-4">
             Recovery
           </p>
-          <div className="rounded-xl bg-card overflow-hidden">
-            <div className="h-[3px]" style={{ backgroundColor: recoveryColor(todayRecovery.recoveryScore) }} />
-            <div className="p-5">
-              <div className="flex items-start gap-6">
-                {/* Big score */}
-                <div className="shrink-0">
-                  <p
-                    className="text-[3.25rem] font-black tabular-nums leading-none"
-                    style={{ color: recoveryColor(todayRecovery.recoveryScore) }}
-                  >
-                    {Math.round(todayRecovery.recoveryScore)}
-                    <span className="text-[1.5rem] font-bold">%</span>
-                  </p>
-                  <p
-                    className="text-[10px] font-bold tracking-[0.15em] uppercase mt-1"
-                    style={{ color: recoveryColor(todayRecovery.recoveryScore) }}
-                  >
-                    {recoveryLabel(todayRecovery.recoveryScore)}
-                  </p>
-                </div>
-
-                {/* Biometrics + impact */}
-                <div className="flex-1 min-w-0 pt-1">
-                  <div className="flex items-center gap-4 mb-3">
-                    {todayRecovery.hrvRmssd && (
-                      <div>
-                        <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase">HRV</p>
-                        <p className="text-[13px] font-bold tabular-nums">{Math.round(todayRecovery.hrvRmssd)}ms</p>
-                      </div>
-                    )}
-                    {todayRecovery.restingHr && (
-                      <div>
-                        <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase">RHR</p>
-                        <p className="text-[13px] font-bold tabular-nums">{Math.round(todayRecovery.restingHr)}bpm</p>
-                      </div>
-                    )}
-                    {todayRecovery.sleepDuration && (
-                      <div>
-                        <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase">Sleep</p>
-                        <p className="text-[13px] font-bold tabular-nums">{(todayRecovery.sleepDuration / 60).toFixed(1)}h</p>
-                      </div>
-                    )}
-                    {todayRecovery.sleepScore && (
-                      <div>
-                        <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase">Sleep score</p>
-                        <p className="text-[13px] font-bold tabular-nums">{Math.round(todayRecovery.sleepScore)}%</p>
-                      </div>
-                    )}
+          {todayRecovery ? (
+            <div className="rounded-xl bg-card overflow-hidden">
+              <div className="h-[3px]" style={{ backgroundColor: recoveryColor(todayRecovery.recoveryScore) }} />
+              <div className="p-5">
+                <div className="flex items-start gap-6">
+                  {/* Big score */}
+                  <div className="shrink-0">
+                    <p
+                      className="text-[3.25rem] font-black tabular-nums leading-none"
+                      style={{ color: recoveryColor(todayRecovery.recoveryScore) }}
+                    >
+                      {Math.round(todayRecovery.recoveryScore)}
+                      <span className="text-[1.5rem] font-bold">%</span>
+                    </p>
+                    <p
+                      className="text-[10px] font-bold tracking-[0.15em] uppercase mt-1"
+                      style={{ color: recoveryColor(todayRecovery.recoveryScore) }}
+                    >
+                      {recoveryLabel(todayRecovery.recoveryScore)}
+                    </p>
                   </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    {trainingImpact(todayRecovery.recoveryScore, todayWorkoutTitle, recentHighStrain)}
-                  </p>
-                </div>
-              </div>
 
-              {/* Recent other activities */}
+                  {/* Biometrics + impact */}
+                  <div className="flex-1 min-w-0 pt-1">
+                    <div className="flex items-center gap-4 mb-3">
+                      {todayRecovery.hrvRmssd && (
+                        <div>
+                          <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase">HRV</p>
+                          <p className="text-[13px] font-bold tabular-nums">{Math.round(todayRecovery.hrvRmssd)}ms</p>
+                        </div>
+                      )}
+                      {todayRecovery.restingHr && (
+                        <div>
+                          <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase">RHR</p>
+                          <p className="text-[13px] font-bold tabular-nums">{Math.round(todayRecovery.restingHr)}bpm</p>
+                        </div>
+                      )}
+                      {todayRecovery.sleepDuration && (
+                        <div>
+                          <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase">Sleep</p>
+                          <p className="text-[13px] font-bold tabular-nums">{(todayRecovery.sleepDuration / 60).toFixed(1)}h</p>
+                        </div>
+                      )}
+                      {todayRecovery.sleepScore && (
+                        <div>
+                          <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase">Sleep score</p>
+                          <p className="text-[13px] font-bold tabular-nums">{Math.round(todayRecovery.sleepScore)}%</p>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      {trainingImpact(todayRecovery.recoveryScore, todayWorkoutTitle, recentHighStrain)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Recent other activities */}
+                {recentActivities.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap gap-2">
+                    {recentActivities.map((a, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold bg-white/5 text-muted-foreground"
+                      >
+                        {a.sportName}
+                        <span className="text-muted-foreground/50">
+                          {a.startDate.toLocaleDateString("en-US", { weekday: "short" })} · {a.strain.toFixed(1)} strain
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl bg-card p-5">
+              <p className="text-[13px] font-semibold text-foreground">WHOOP connected</p>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Recovery data posts each morning after sleep. Check back tomorrow.
+              </p>
               {recentActivities.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap gap-2">
                   {recentActivities.map((a, i) => (
@@ -171,7 +195,7 @@ export default async function DashboardPage() {
                 </div>
               )}
             </div>
-          </div>
+          )}
         </section>
       )}
 
