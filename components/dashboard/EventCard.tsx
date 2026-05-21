@@ -130,7 +130,7 @@ export function EventCard({ event }: EventCardProps) {
         <div className="mt-5 flex items-center gap-2 border-t border-border/50 pt-4">
           {event.hasPlan ? (
             <>
-              <Link href={`/calendar?event=${event.id}`}>
+              <Link href={`/plan/${event.planId}`}>
                 <Button size="sm" variant="outline" className="gap-1.5 text-[12px] h-8">
                   <Zap className="h-3 w-3" /> View Plan
                 </Button>
