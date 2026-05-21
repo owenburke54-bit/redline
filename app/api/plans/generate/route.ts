@@ -103,14 +103,23 @@ export async function POST(req: NextRequest) {
     select: { id: true, scheduledDate: true, type: true, targetDistance: true, intensityZone: true },
   });
 
+  const HARD_SESSIONS = new Set(["LONG_RUN", "INTERVALS", "TEMPO", "RACE", "HYROX_SIM"]);
   const RUN_TYPES = new Set(["EASY_RUN", "LONG_RUN", "TEMPO", "INTERVALS", "RACE"]);
-  const COMPLEMENTARY_TYPES = new Set(["HYROX_STATION_WORK", "STRENGTH", "HYROX_SIM"]);
+  const COMPLEMENTARY_TYPES = new Set(["HYROX_STATION_WORK", "STRENGTH"]);
 
   const existingByDate = new Map<string, (typeof existingWorkouts[0])[]>();
   for (const w of existingWorkouts) {
     const key = w.scheduledDate.toISOString().split("T")[0];
     if (!existingByDate.has(key)) existingByDate.set(key, []);
     existingByDate.get(key)!.push(w);
+  }
+
+  function adjDateKeys(key: string): [string, string] {
+    const d = new Date(key + "T12:00:00Z");
+    return [
+      new Date(d.getTime() - 86400000).toISOString().split("T")[0],
+      new Date(d.getTime() + 86400000).toISOString().split("T")[0],
+    ];
   }
 
   const filteredWorkouts: typeof builtPlan.workouts = [];
@@ -121,19 +130,45 @@ export async function POST(req: NextRequest) {
     const dayExisting = existingByDate.get(key) ?? [];
     const dayNonRest = dayExisting.filter(e => e.type !== "REST");
 
-    if (dayNonRest.length === 0) {
+    // Check adjacent days for hard sessions from existing plans
+    const [prevKey, nextKey] = adjDateKeys(key);
+    const adjExisting = [
+      ...(existingByDate.get(prevKey) ?? []),
+      ...(existingByDate.get(nextKey) ?? []),
+    ].filter(e => e.type !== "REST");
+    const adjHard = adjExisting.filter(e => HARD_SESSIONS.has(e.type));
+    const adjHasLongRun = adjExisting.some(e => e.type === "LONG_RUN" || e.type === "RACE");
+
+    // REST: always keep
+    if (w.type === "REST") {
       filteredWorkouts.push(w);
       continue;
     }
 
-    if (w.type === "REST" || w.type === "CROSS_TRAIN") continue;
+    // CROSS_TRAIN: skip if same day already has non-rest activity
+    if (w.type === "CROSS_TRAIN") {
+      if (dayNonRest.length === 0) filteredWorkouts.push(w);
+      continue;
+    }
 
+    // HARD session: skip if adjacent to existing HARD session from another plan
+    if (HARD_SESSIONS.has(w.type) && adjHard.length > 0) {
+      continue;
+    }
+
+    // COMPLEMENTARY (STATION_WORK, STRENGTH): skip if same day has existing HARD session
     if (COMPLEMENTARY_TYPES.has(w.type)) {
+      if (dayNonRest.some(e => HARD_SESSIONS.has(e.type))) continue;
       filteredWorkouts.push(w);
       continue;
     }
 
     if (RUN_TYPES.has(w.type)) {
+      // Skip runs > 4mi on the day immediately after a long run/race from another plan
+      if ((w.targetDistance ?? 0) > 4 && adjHasLongRun) {
+        continue;
+      }
+
       const existingRun = dayNonRest.find(e => RUN_TYPES.has(e.type));
       if (!existingRun) {
         filteredWorkouts.push(w);

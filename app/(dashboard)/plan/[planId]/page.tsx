@@ -3,7 +3,8 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getMonday } from "@/lib/utils";
 import { WeekRow, type WeekRowData, type WorkoutRowData } from "@/components/plan/WeekRow";
-import { Trophy, Target, CalendarDays, Zap } from "lucide-react";
+import { ResolveConflictsButton } from "@/components/plan/ResolveConflictsButton";
+import { Trophy, Target, CalendarDays } from "lucide-react";
 import Link from "next/link";
 
 const KEY_SESSION_ORDER = ["RACE", "HYROX_SIM", "LONG_RUN", "INTERVALS", "TEMPO", "HYROX_STATION_WORK", "STRENGTH"];
@@ -153,10 +154,13 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
   return (
     <div className="max-w-4xl space-y-10">
 
-      {/* Back link */}
-      <Link href="/events" className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-        ← Events
-      </Link>
+      {/* Back link + actions */}
+      <div className="flex items-center justify-between gap-4">
+        <Link href="/events" className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+          ← Events
+        </Link>
+        <ResolveConflictsButton />
+      </div>
 
       {/* Header */}
       <div className="flex items-start justify-between gap-6">
