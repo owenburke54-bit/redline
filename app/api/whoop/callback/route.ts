@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const userId = searchParams.get("state");
 
   if (!code || !userId) {
-    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/dashboard?whoop=error`);
+    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?whoop=error`);
   }
 
   const tokenRes = await fetch(WHOOP_TOKEN_URL, {
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   });
 
   if (!tokenRes.ok) {
-    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/dashboard?whoop=error`);
+    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?whoop=error`);
   }
 
   const tokens = await tokenRes.json();
@@ -56,5 +56,5 @@ export async function GET(req: NextRequest) {
   // Kick off initial 30-day backfill (non-blocking)
   syncWhoopData(userId, 30).catch(() => {});
 
-  return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/dashboard?whoop=connected`);
+  return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/progress?whoop=connected`);
 }
