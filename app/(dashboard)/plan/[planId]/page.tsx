@@ -16,12 +16,13 @@ const PHASE_COLORS: Record<string, string> = {
   Race:  "rgba(255,255,255,0.8)",
 };
 
-export default async function PlanPage({ params }: { params: { planId: string } }) {
+export default async function PlanPage({ params }: { params: Promise<{ planId: string }> }) {
   const session = await auth();
   const userId = session!.user!.id as string;
+  const { planId } = await params;
 
   const plan = await db.trainingPlan.findUnique({
-    where: { id: params.planId },
+    where: { id: planId },
     include: {
       event: true,
       workouts: { orderBy: { scheduledDate: "asc" } },
