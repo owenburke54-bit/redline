@@ -5,6 +5,10 @@
       "schedule": "0 6 * * *"
     },
     {
+      "path": "/api/whoop/sync",
+      "schedule": "0 6 * * *"
+    },
+    {
       "path": "/api/plans/review",
       "schedule": "0 7 * * 1"
     },

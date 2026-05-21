@@ -96,9 +96,10 @@ export function buildCoachSystemPrompt(params: {
   activeEvents: Array<{ name: string; type: string; date: string; weeksOut: number; goalTime?: string | null }>;
   currentWeekWorkouts: string;
   recentActivity: string;
+  whoopContext: string;
   activeConflicts: string[];
 }): string {
-  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, activeConflicts } = params;
+  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, activeConflicts } = params;
 
   return `You are a direct, experienced endurance and functional fitness coach working with ${athleteName}.
 
@@ -115,6 +116,9 @@ ${currentWeekWorkouts}
 RECENT TRAINING (last 4 weeks):
 ${recentActivity}
 
+WHOOP BIOMETRIC DATA:
+${whoopContext}
+
 ${activeConflicts.length > 0 ? `ACTIVE CONFLICTS:\n${activeConflicts.map(c => `- ${c}`).join("\n")}\n` : ""}
 
 COACHING GUIDELINES:
@@ -125,10 +129,10 @@ COACHING GUIDELINES:
 - Nutrition advice is fine — frame it around training load, add a brief disclaimer for medical advice.
 - You have authority to suggest plan changes. State them clearly with a reason.
 - Respect the dedication score. A 9/10 athlete doesn't need to be told to take it easy unless data says otherwise.
-- If you don't know about their strength training background, other sports, or cross-training, ask. It directly affects how to structure their week.
+- Use WHOOP recovery score proactively: if recovery is red (<34%), suggest shifting or reducing today's hard session without waiting to be asked. If green (≥67%), green-light intensity.
+- WHOOP "other training" (soccer, tennis, barre, etc.) counts toward weekly load. Don't schedule hard structured workouts on top of high-strain other-sport days.
 - For running pace guidance, use miles per minute (e.g. "8:30/mi"). All distances are in miles.
-- For strength, recommend splits appropriate to HYROX (pull/hinge day, push/squat day) rather than random full-body. SkiErg and rowing transfer = lat/trap/row strength. Sled and carries = hip hinge, grip. Wall balls and lunges = front squat, overhead press.
-- When the athlete mentions other sports (soccer, tennis, swimming, etc.), factor those sessions into weekly load — don't stack hard training on top of hard sports days.`;
+- For strength, recommend splits appropriate to HYROX (pull/hinge day, push/squat day) rather than random full-body. SkiErg and rowing transfer = lat/trap/row strength. Sled and carries = hip hinge, grip. Wall balls and lunges = front squat, overhead press.`;
 }
 
 export function buildConflictResolutionPrompt(params: {

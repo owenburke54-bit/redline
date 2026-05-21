@@ -16,6 +16,10 @@ model User {
   stravaAccessToken  String?
   stravaRefreshToken String?
   stravaTokenExpiry  DateTime?
+  whoopId            String?   @unique
+  whoopAccessToken   String?
+  whoopRefreshToken  String?
+  whoopTokenExpiry   DateTime?
   dedicationScore    Int       @default(7)
   onboardingComplete Boolean   @default(false)
   createdAt          DateTime  @default(now())
@@ -27,6 +31,8 @@ model User {
   plans            TrainingPlan[]
   workouts         Workout[]
   stravaActivities StravaActivity[]
+  whoopActivities  WhoopActivity[]
+  whoopRecoveries  WhoopRecovery[]
   checkins         WeeklyCheckin[]
   athleteProfile   AthleteProfile?
 }
@@ -253,4 +259,38 @@ model ConflictLog {
   aiSuggestion    String?
   resolved        Boolean  @default(false)
   resolvedBy      String?
+}
+
+model WhoopActivity {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  whoopId      String   @unique
+  sportName    String
+  startDate    DateTime
+  endDate      DateTime
+  strain       Float
+  avgHeartRate Float?
+  maxHeartRate Float?
+  calories     Float?
+
+  createdAt DateTime @default(now())
+}
+
+model WhoopRecovery {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  date          DateTime
+  recoveryScore Float
+  hrvRmssd      Float?
+  restingHr     Float?
+  sleepScore    Float?
+  sleepDuration Int?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
 }

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getMonday } from "@/lib/utils";
 import { TrainingLoadChart } from "@/components/progress/TrainingLoadChart";
 import { ConsistencyChart } from "@/components/progress/ConsistencyChart";
+import { WhoopConnectCard } from "@/components/whoop/WhoopConnectCard";
 import { TrendingUp, CheckCircle2, Layers, Timer } from "lucide-react";
 
 export default async function ProgressPage() {
@@ -18,6 +19,30 @@ export default async function ProgressPage() {
   const rangeEnd = new Date(currentMonday);
   rangeEnd.setDate(rangeEnd.getDate() + 8 * 7 - 1);
   rangeEnd.setHours(23, 59, 59, 999);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { whoopAccessToken: true, whoopId: true },
+  });
+  const whoopConnected = !!(user?.whoopAccessToken && user?.whoopId);
+
+  const [lastActivity, todayRecovery] = whoopConnected
+    ? await Promise.all([
+        db.whoopActivity.findFirst({
+          where: { userId },
+          orderBy: { startDate: "desc" },
+          select: { startDate: true },
+        }),
+        db.whoopRecovery.findFirst({
+          where: { userId, date: { gte: today } },
+          orderBy: { date: "desc" },
+          select: { recoveryScore: true, date: true },
+        }),
+      ])
+    : [null, null];
 
   const [workouts, plans] = await Promise.all([
     db.workout.findMany({
@@ -271,6 +296,17 @@ export default async function ProgressPage() {
           </div>
         </section>
       )}
+
+      {/* Wearables */}
+      <section>
+        <h2 className="text-sm font-semibold mb-3">Wearables</h2>
+        <WhoopConnectCard
+          connected={whoopConnected}
+          recoveryScore={todayRecovery?.recoveryScore ?? null}
+          recoveryDate={todayRecovery?.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) ?? null}
+          lastActivityDate={lastActivity?.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) ?? null}
+        />
+      </section>
     </div>
   );
 }

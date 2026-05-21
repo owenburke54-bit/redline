@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import Anthropic from "@anthropic-ai/sdk";
 import { buildCoachSystemPrompt } from "@/lib/ai/coachPrompts";
+import { formatWhoopContextForCoach } from "@/lib/whoop/sync";
 import { weeksUntil } from "@/lib/utils";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -33,7 +34,11 @@ export async function POST(req: NextRequest) {
 
   const { start, end } = getWeekBounds();
 
-  const [user, profile, events, weekWorkouts] = await Promise.all([
+  const whoopStart = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [user, profile, events, weekWorkouts, whoopActivities, todayRecovery] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.athleteProfile.findUnique({ where: { userId } }),
     db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" } }),
@@ -41,6 +46,16 @@ export async function POST(req: NextRequest) {
       where: { userId, scheduledDate: { gte: start, lt: end } },
       include: { plan: { include: { event: true } } },
       orderBy: { scheduledDate: "asc" },
+    }),
+    db.whoopActivity.findMany({
+      where: { userId, startDate: { gte: whoopStart } },
+      orderBy: { startDate: "desc" },
+      select: { sportName: true, startDate: true, strain: true },
+    }),
+    db.whoopRecovery.findFirst({
+      where: { userId, date: { gte: today } },
+      orderBy: { date: "desc" },
+      select: { recoveryScore: true, hrvRmssd: true, restingHr: true, sleepScore: true, sleepDuration: true },
     }),
   ]);
 
@@ -65,6 +80,8 @@ export async function POST(req: NextRequest) {
     ? weekWorkouts.map(w => `${DAY_NAMES[w.scheduledDate.getDay()]}: ${w.title} (${w.status.toLowerCase()})`).join(", ")
     : "No workouts scheduled this week";
 
+  const whoopContext = formatWhoopContextForCoach(whoopActivities, todayRecovery);
+
   const systemPrompt = buildCoachSystemPrompt({
     athleteName: user?.name?.split(" ")[0] ?? "Athlete",
     dedicationScore: user?.dedicationScore ?? 7,
@@ -72,13 +89,14 @@ export async function POST(req: NextRequest) {
     activeEvents,
     currentWeekWorkouts: weekWorkoutsSummary,
     recentActivity: "Strava not connected — no recent activity data available.",
+    whoopContext,
     activeConflicts: [],
   });
 
   const conversationMessages: { role: "user" | "assistant"; content: string }[] = isInitial
     ? [{
         role: "user",
-        content: `You are meeting this athlete for the first time. Acknowledge their specific upcoming events (${activeEvents.map(e => `${e.name} in ${e.weeksOut} weeks${e.goalTime ? ` targeting ${e.goalTime}` : ""}`).join(", ")}). Then ask 2 targeted questions: what their strength training currently looks like, and whether they play any other sports or do regular activities outside of running. Be direct and conversational. Under 80 words. No bullet points.`,
+        content: `You are meeting this athlete for the first time. Acknowledge their specific upcoming events (${activeEvents.map(e => `${e.name} in ${e.weeksOut} weeks${e.goalTime ? ` targeting ${e.goalTime}` : ""}`).join(", ")}). ${whoopActivities.length > 0 ? `You can see their WHOOP data — acknowledge any other training you notice. ` : ""}Ask 1 targeted question about what their strength training currently looks like. Be direct and conversational. Under 80 words. No bullet points.`,
       }]
     : messages;
 
