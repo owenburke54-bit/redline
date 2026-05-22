@@ -98,8 +98,16 @@ export function buildCoachSystemPrompt(params: {
   recentActivity: string;
   whoopContext: string;
   activeConflicts: string[];
+  classSchedule?: { studios: { id: string; name: string; days: number[] }[] } | null;
 }): string {
-  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, activeConflicts } = params;
+  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, activeConflicts, classSchedule } = params;
+
+  const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const classScheduleNote = classSchedule?.studios && classSchedule.studios.length > 0
+    ? `STUDIO CLASS SCHEDULE:\n${classSchedule.studios.map(s =>
+        `- ${s.name}: ${s.days.length > 0 ? s.days.map(d => DAY_NAMES[d]).join(", ") : "days not set"}`
+      ).join("\n")}\nTreat studio class days as additional training load. Barry's counts as a hard run day. OrangeTheory HYROX and Backyard Boston count as hard functional fitness days. Do not stack another hard session on these days.`
+    : "";
 
   return `You are a direct, experienced endurance and functional fitness coach working with ${athleteName}.
 
@@ -119,7 +127,7 @@ ${recentActivity}
 WHOOP BIOMETRIC DATA:
 ${whoopContext}
 
-${activeConflicts.length > 0 ? `ACTIVE CONFLICTS:\n${activeConflicts.map(c => `- ${c}`).join("\n")}\n` : ""}
+${classScheduleNote ? `${classScheduleNote}\n\n` : ""}${activeConflicts.length > 0 ? `ACTIVE CONFLICTS:\n${activeConflicts.map(c => `- ${c}`).join("\n")}\n` : ""}
 
 COACHING GUIDELINES:
 - Be direct and knowledgeable. No fluff, no unsolicited encouragement.

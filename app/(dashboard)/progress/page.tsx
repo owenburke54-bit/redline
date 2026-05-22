@@ -4,6 +4,7 @@ import { getMonday } from "@/lib/utils";
 import { TrainingLoadChart } from "@/components/progress/TrainingLoadChart";
 import { ConsistencyChart } from "@/components/progress/ConsistencyChart";
 import { WhoopConnectCard } from "@/components/whoop/WhoopConnectCard";
+import { ClassScheduleCard, type ClassSchedule } from "@/components/profile/ClassScheduleCard";
 import { TrendingUp, CheckCircle2, Layers, Timer } from "lucide-react";
 
 export default async function ProgressPage() {
@@ -29,20 +30,23 @@ export default async function ProgressPage() {
   });
   const whoopConnected = !!(user?.whoopAccessToken && user?.whoopId);
 
-  const [lastActivity, todayRecovery] = whoopConnected
-    ? await Promise.all([
+  const [classScheduleProfile, [lastActivity, todayRecovery]] = await Promise.all([
+    db.athleteProfile.findUnique({ where: { userId }, select: { classSchedule: true } }),
+    whoopConnected
+    ? Promise.all([
         db.whoopActivity.findFirst({
           where: { userId },
           orderBy: { startDate: "desc" },
           select: { startDate: true },
         }),
         db.whoopRecovery.findFirst({
-          where: { userId, date: { gte: today } },
+          where: { userId },
           orderBy: { date: "desc" },
           select: { recoveryScore: true, date: true },
         }),
       ])
-    : [null, null];
+    : [null, null] as [null, null],
+  ]);
 
   const [workouts, plans] = await Promise.all([
     db.workout.findMany({
@@ -306,6 +310,12 @@ export default async function ProgressPage() {
           recoveryDate={todayRecovery?.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) ?? null}
           lastActivityDate={lastActivity?.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) ?? null}
         />
+      </section>
+
+      {/* Studio classes */}
+      <section>
+        <h2 className="text-sm font-semibold mb-3">Studio Classes</h2>
+        <ClassScheduleCard initial={classScheduleProfile?.classSchedule as ClassSchedule | null} />
       </section>
     </div>
   );

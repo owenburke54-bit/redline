@@ -86,6 +86,7 @@ model AthleteProfile {
   inferredDedicationScore Float?
   avgWeeklyEffort         Float?
   consistencyScore        Float?
+  classSchedule           Json?
 
   updatedAt DateTime @updatedAt
 }

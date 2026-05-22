@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       select: { sportName: true, startDate: true, strain: true },
     }),
     db.whoopRecovery.findFirst({
-      where: { userId, date: { gte: today } },
+      where: { userId },
       orderBy: { date: "desc" },
       select: { recoveryScore: true, hrvRmssd: true, restingHr: true, sleepScore: true, sleepDuration: true },
     }),
@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
     recentActivity: "Strava not connected — no recent activity data available.",
     whoopContext,
     activeConflicts: [],
+    classSchedule: profile?.classSchedule as { studios: { id: string; name: string; days: number[] }[] } | null ?? null,
   });
 
   const conversationMessages: { role: "user" | "assistant"; content: string }[] = isInitial

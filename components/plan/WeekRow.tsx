@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { useState, useCallback } from "react";
+import { ChevronDown, Check, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export type WorkoutRowData = {
   id: string;
@@ -89,6 +90,78 @@ function WorkoutDayBlock({ workout }: { workout: WorkoutRowData | undefined }) {
       {isCompleted && (
         <span className="text-[8px] mt-0.5 relative z-10" style={{ color: "#22c55e" }}>✓</span>
       )}
+    </div>
+  );
+}
+
+function WorkoutStatusButtons({ workoutId, status: initialStatus }: { workoutId: string; status: string }) {
+  const [status, setStatus] = useState(initialStatus);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const patch = useCallback(async (next: "COMPLETED" | "SKIPPED" | "SCHEDULED") => {
+    setLoading(true);
+    const optimistic = next;
+    setStatus(optimistic);
+    try {
+      const res = await fetch(`/api/workouts/${workoutId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      if (!res.ok) setStatus(initialStatus);
+      else router.refresh();
+    } catch {
+      setStatus(initialStatus);
+    } finally {
+      setLoading(false);
+    }
+  }, [workoutId, initialStatus, router]);
+
+  if (status === "COMPLETED") {
+    return (
+      <button
+        onClick={() => patch("SCHEDULED")}
+        disabled={loading}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold transition-colors"
+        style={{ color: "#22c55e", background: "rgba(34,197,94,0.1)" }}
+        title="Mark as not done"
+      >
+        <Check className="h-3 w-3" /> Done
+      </button>
+    );
+  }
+  if (status === "SKIPPED") {
+    return (
+      <button
+        onClick={() => patch("SCHEDULED")}
+        disabled={loading}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold transition-colors"
+        style={{ color: "#ef4444", background: "rgba(239,68,68,0.1)" }}
+        title="Mark as not skipped"
+      >
+        <X className="h-3 w-3" /> Skipped
+      </button>
+    );
+  }
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => patch("COMPLETED")}
+        disabled={loading}
+        className="h-6 w-6 rounded flex items-center justify-center transition-colors hover:bg-green-500/20 text-muted-foreground/30 hover:text-green-400"
+        title="Mark complete"
+      >
+        <Check className="h-3.5 w-3.5" />
+      </button>
+      <button
+        onClick={() => patch("SKIPPED")}
+        disabled={loading}
+        className="h-6 w-6 rounded flex items-center justify-center transition-colors hover:bg-red-500/20 text-muted-foreground/30 hover:text-red-400"
+        title="Mark skipped"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
@@ -225,7 +298,7 @@ export function WeekRow({ week, defaultExpanded }: { week: WeekRowData; defaultE
                         {w.description}
                       </p>
                     </div>
-                    <div className="shrink-0 text-right space-y-0.5">
+                    <div className="shrink-0 text-right space-y-1">
                       {w.targetDistance && (
                         <p className="text-[11px] font-bold tabular-nums">{w.targetDistance}mi</p>
                       )}
@@ -235,12 +308,7 @@ export function WeekRow({ week, defaultExpanded }: { week: WeekRowData; defaultE
                       {w.targetPace && (
                         <p className="text-[10px] text-muted-foreground/50">{w.targetPace}/mi</p>
                       )}
-                      {w.status === "COMPLETED" && (
-                        <p className="text-[9px] font-bold" style={{ color: "#22c55e" }}>DONE</p>
-                      )}
-                      {w.status === "SKIPPED" && (
-                        <p className="text-[9px] font-bold" style={{ color: "#ef4444" }}>SKIP</p>
-                      )}
+                      <WorkoutStatusButtons workoutId={w.id} status={w.status} />
                     </div>
                   </div>
                 );

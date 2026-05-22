@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { daysUntil, formatDate } from "@/lib/utils";
 import { Trophy, Zap, MessageSquare, ChevronRight } from "lucide-react";
+import { WhoopSyncButton } from "@/components/whoop/WhoopSyncButton";
 import Link from "next/link";
 
 function recoveryColor(score: number): string {
@@ -54,7 +55,7 @@ export default async function DashboardPage() {
       include: { plan: { include: { event: true } } },
     }),
     db.whoopRecovery.findFirst({
-      where: { userId, date: { gte: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) } },
+      where: { userId },
       orderBy: { date: "desc" },
       select: { recoveryScore: true, hrvRmssd: true, restingHr: true, sleepScore: true, sleepDuration: true, date: true },
     }),
@@ -96,13 +97,24 @@ export default async function DashboardPage() {
       {/* WHOOP recovery */}
       {whoopConnected && (
         <section>
-          <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-4">
-            Recovery
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase">
+              Recovery
+            </p>
+            <WhoopSyncButton />
+          </div>
           {todayRecovery ? (
             <div className="rounded-xl bg-card overflow-hidden">
               <div className="h-[3px]" style={{ backgroundColor: recoveryColor(todayRecovery.recoveryScore) }} />
               <div className="p-5">
+                {(() => {
+                  const daysAgo = Math.floor((Date.now() - todayRecovery.date.getTime()) / 86400000);
+                  return daysAgo > 1 ? (
+                    <p className="text-[10px] text-amber-400/70 mb-3">
+                      From {todayRecovery.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} — tap Sync to refresh
+                    </p>
+                  ) : null;
+                })()}
                 <div className="flex items-start gap-6">
                   {/* Big score */}
                   <div className="shrink-0">
