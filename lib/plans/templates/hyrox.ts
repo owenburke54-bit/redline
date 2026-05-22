@@ -51,7 +51,12 @@ function build8WeekHyrox(): TemplateWeek[] {
           description: "5×300m SkiErg at moderate pace, 2min rest. Cue: start tall, then hinge at the hips — drive comes from lats and hip extension, not shoulders. Arms are levers, not the engine. This one technique fix saves 60-90sec on race day.",
           intensityZone: 2,
         },
-        { day: 3, type: "REST", title: "Rest", description: "Full rest day." },
+        {
+          day: 3, type: "STRENGTH",
+          title: "Strength B: Push & Squat — Foundation",
+          description: "Goblet squat 4×10 (chest high, knees tracking toes). DB overhead press 4×10. Walking lunges 3×12/leg. Box jumps 3×6 (full reset — power, not speed). Hollow body hold 3×30s. Targets sled push, wall balls, and sandbag lunge mechanics.",
+          intensityZone: 3,
+        },
         {
           day: 4, type: "TEMPO",
           title: "Threshold Run 3mi",
@@ -134,7 +139,12 @@ function build8WeekHyrox(): TemplateWeek[] {
           description: "4 rounds: 500m SkiErg + 500m row. 2min rest between. Note how your rowing pace drops after the SkiErg — that fatigue carryover is exactly what the race asks you to manage. This pairing mirrors the first two HYROX stations.",
           intensityZone: 4,
         },
-        { day: 3, type: "REST", title: "Rest", description: "Rest day." },
+        {
+          day: 3, type: "STRENGTH",
+          title: "Strength B: Push & Squat — Load",
+          description: "Front squat 4×8 (heavier than last week — build toward race-day demand). Overhead press 4×8. Reverse lunges 3×10/leg (add KB). Box jumps 4×5 (explosive). Sandbag squat hold 3×30s (20kg on traps — practice keeping torso upright under load). Directly prepares for wall balls and sandbag lunges.",
+          intensityZone: 4,
+        },
         {
           day: 4, type: "INTERVALS",
           title: "VO₂max Intervals: 4×1km",
@@ -217,7 +227,12 @@ function build8WeekHyrox(): TemplateWeek[] {
           description: "3 rounds: Sled push 50m (race weight) + sandbag lunges 50m (20kg) + farmers carry 100m (24kg each). 4min rest between rounds. Sandbag cue: high on traps, torso vertical, 0.9-1.1m step length. This three-station combo is where HYROX races are lost — train it weekly.",
           intensityZone: 5,
         },
-        { day: 3, type: "REST", title: "Rest", description: "Rest." },
+        {
+          day: 3, type: "STRENGTH",
+          title: "Strength B: Push & Squat — Power",
+          description: "Front squat 4×5 (near max load for the plan). Push press 4×5 (use leg drive — teaches the explosive hip extension needed for wall balls). Step-ups with KB 3×8/leg. Broad jumps 4×5. Sandbag lunge 3×30m (race weight, 20kg). Peak strength session — log everything.",
+          intensityZone: 5,
+        },
         {
           day: 4, type: "INTERVALS",
           title: "VO₂max Intervals: 6×800m",
@@ -385,7 +400,12 @@ function build16WeekHyrox(): TemplateWeek[] {
           description: "Second Zone 2 run of the week. Keep it conversational.",
           targetDistance: 3, intensityZone: 2,
         },
-        { day: 4, type: "REST", title: "Rest", description: "Rest." },
+        {
+          day: 4, type: "STRENGTH",
+          title: "Strength B: Foundation Push & Squat",
+          description: "Goblet squat 4×12 (chest up, knees track toes). DB overhead press 4×12. Walking lunges 3×12/leg. Box step-ups 3×10/leg. Plank 3×45s. First of two weekly strength sessions — 2 days lifts per week is the baseline for HYROX prep.",
+          intensityZone: 3,
+        },
         {
           day: 5, type: "HYROX_STATION_WORK",
           title: "Station Intro: Rowing + Farmers Carry",
@@ -429,7 +449,12 @@ function build16WeekHyrox(): TemplateWeek[] {
           description: "Zone 2.",
           targetDistance: 3, intensityZone: 2,
         },
-        { day: 4, type: "REST", title: "Rest", description: "Rest." },
+        {
+          day: 4, type: "STRENGTH",
+          title: "Strength A: Foundation Pull & Hinge",
+          description: "Romanian deadlift 4×10 (slow eccentric, neutral spine). Lat pulldown 4×10. Single-arm DB row 3×12/side. Farmers carry 3×40m. Dead bug 3×10/side. These movements transfer directly to SkiErg pull, sled pull, and farmers carry station.",
+          intensityZone: 3,
+        },
         {
           day: 5, type: "HYROX_STATION_WORK",
           title: "Station Intro: Burpee Broad Jumps + Wall Balls",
@@ -467,7 +492,12 @@ function build16WeekHyrox(): TemplateWeek[] {
           description: "3 rounds: 500m SkiErg + 500m row, 2min rest. Push the SkiErg pace. Note how rowing pace drops after the SkiErg — that fatigue transfer is the race in miniature. The gap narrows with training.",
           intensityZone: 3,
         },
-        { day: 3, type: "REST", title: "Rest", description: "Rest." },
+        {
+          day: 3, type: "STRENGTH",
+          title: "Strength B: Load Push & Squat",
+          description: "Front squat 4×10 (add weight from week 2). DB overhead press 4×10. DB walking lunges 3×12/leg (add load). Box jumps 3×6. Hollow body hold 3×30s. Building the squat strength for wall balls and sled push.",
+          intensityZone: 3,
+        },
         {
           day: 4, type: "TEMPO",
           title: "First Threshold Run 3mi",
@@ -550,7 +580,12 @@ function build16WeekHyrox(): TemplateWeek[] {
           description: "4 rounds: 500m SkiErg at race pace + 500m row at race pace. Full rest between. Push the pace — no more technique-only effort. You know the movement; now build the engine.",
           intensityZone: 4,
         },
-        { day: 3, type: "REST", title: "Rest", description: "Rest." },
+        {
+          day: 3, type: "STRENGTH",
+          title: "Strength B: Build Load Push & Squat",
+          description: "Front squat 4×8 (heavier than week 3). Overhead press 4×8. Reverse lunges with KB 3×10/leg. Box jumps 4×6. Sandbag squat hold 3×30s (practice race-weight carry). Building toward the strength needed for the second-half compromised runs.",
+          intensityZone: 4,
+        },
         {
           day: 4, type: "INTERVALS",
           title: "Run Intervals: 5×600m",
@@ -594,7 +629,12 @@ function build16WeekHyrox(): TemplateWeek[] {
           description: "4 rounds: Sled push 50m (race weight) + sandbag lunges 50m (race weight). 3min rest. Lunge cue: torso vertical, 0.9-1.1m step length, sandbag rides high on traps. This is one of the hardest pairings in the race.",
           intensityZone: 4,
         },
-        { day: 3, type: "REST", title: "Rest", description: "Rest." },
+        {
+          day: 3, type: "STRENGTH",
+          title: "Strength A: Build Load Pull & Hinge",
+          description: "Trap bar deadlift 4×6 (loading up from week 5). Weighted pull-ups 3×6. Single-arm row 4×8/side. Farmers carry 4×50m (near race weight — 24kg each). Copenhagen plank 3×20s/side. Progressive overload is the mechanism — log it.",
+          intensityZone: 4,
+        },
         {
           day: 4, type: "TEMPO",
           title: "Threshold Run 4mi",

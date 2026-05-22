@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { FloatingCoachButton } from "@/components/coach/FloatingCoachButton";
 
 export default async function DashboardLayout({
   children,
@@ -22,6 +23,7 @@ export default async function DashboardLayout({
     <div className="flex h-screen overflow-hidden">
       <Sidebar userName={session.user?.name} />
       <main className="flex-1 overflow-y-auto p-8 lg:p-10">{children}</main>
+      <FloatingCoachButton />
     </div>
   );
 }

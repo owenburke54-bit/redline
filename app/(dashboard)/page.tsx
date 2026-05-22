@@ -50,7 +50,7 @@ export default async function DashboardPage() {
 
   const [user, events, todayWorkouts, todayRecovery, recentActivities] = await Promise.all([
     db.user.findUnique({ where: { id: userId }, select: { id: true, name: true, dedicationScore: true, whoopAccessToken: true, whoopId: true } }),
-    db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" } }),
+    db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" }, include: { plan: { select: { id: true } } } }),
     db.workout.findMany({
       where: { userId, scheduledDate: { gte: todayStart, lt: todayEnd } },
       include: { plan: { include: { event: true } } },
@@ -225,11 +225,9 @@ export default async function DashboardPage() {
               const days = daysUntil(event.date);
               const isHyrox = event.type.startsWith("HYROX");
               const color = isHyrox ? "var(--hyrox-color)" : "var(--marathon-color)";
+              const href = event.plan?.id ? `/plan/${event.plan.id}` : `/events`;
               return (
-                <div
-                  key={event.id}
-                  className="rounded-xl bg-card overflow-hidden"
-                >
+                <Link key={event.id} href={href} className="block rounded-xl bg-card overflow-hidden hover:ring-1 transition-all" style={{ ["--tw-ring-color" as string]: color + "40" }}>
                   <div className="h-[3px]" style={{ backgroundColor: color }} />
                   <div className="p-5">
                     <div className="flex items-start justify-between gap-4">
@@ -262,7 +260,7 @@ export default async function DashboardPage() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
