@@ -35,6 +35,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "WHOOP not connected" }, { status: 400 });
   }
 
-  const result = await syncWhoopData(session.user.id, 30);
-  return NextResponse.json(result);
+  try {
+    const result = await syncWhoopData(session.user.id as string, 30);
+    return NextResponse.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Sync failed";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
