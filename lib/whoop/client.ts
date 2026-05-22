@@ -82,7 +82,7 @@ async function getValidToken(userId: string): Promise<string> {
   return user.whoopAccessToken;
 }
 
-async function whoopFetch<T>(userId: string, path: string, params?: Record<string, string>): Promise<T> {
+async function whoopFetch<T>(userId: string, path: string, params?: Record<string, string>, allow404 = false): Promise<T | null> {
   const token = await getValidToken(userId);
   const url = new URL(`${WHOOP_API_BASE}${path}`);
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
@@ -91,6 +91,7 @@ async function whoopFetch<T>(userId: string, path: string, params?: Record<strin
     headers: { Authorization: `Bearer ${token}` },
   });
 
+  if (res.status === 404 && allow404) return null;
   if (!res.ok) throw new Error(`WHOOP API error ${res.status} on ${path}`);
   return res.json() as Promise<T>;
 }
@@ -141,8 +142,8 @@ export async function fetchWorkouts(userId: string, start: Date, end: Date): Pro
     if (nextToken) params.nextToken = nextToken;
 
     const page = await whoopFetch<PaginatedResponse<WhoopWorkout>>(userId, "/activity/workout", params);
-    all.push(...page.records);
-    nextToken = page.next_token;
+    all.push(...page!.records);
+    nextToken = page!.next_token;
   } while (nextToken);
 
   return all;
@@ -160,7 +161,8 @@ export async function fetchRecoveries(userId: string, start: Date, end: Date): P
     };
     if (nextToken) params.nextToken = nextToken;
 
-    const page = await whoopFetch<PaginatedResponse<WhoopRecoveryRecord>>(userId, "/recovery", params);
+    const page = await whoopFetch<PaginatedResponse<WhoopRecoveryRecord>>(userId, "/recovery", params, true);
+    if (!page) return all; // 404 = no recovery data yet
     all.push(...page.records);
     nextToken = page.next_token;
   } while (nextToken);
@@ -169,13 +171,13 @@ export async function fetchRecoveries(userId: string, start: Date, end: Date): P
 }
 
 export async function fetchWorkoutById(userId: string, workoutId: number): Promise<WhoopWorkout> {
-  return whoopFetch<WhoopWorkout>(userId, `/activity/workout/${workoutId}`);
+  return (await whoopFetch<WhoopWorkout>(userId, `/activity/workout/${workoutId}`))!;
 }
 
 export async function fetchRecoveryById(userId: string, cycleId: number): Promise<WhoopRecoveryRecord> {
-  return whoopFetch<WhoopRecoveryRecord>(userId, `/recovery/${cycleId}`);
+  return (await whoopFetch<WhoopRecoveryRecord>(userId, `/recovery/${cycleId}`))!;
 }
 
 export async function fetchProfile(userId: string): Promise<{ user_id: number }> {
-  return whoopFetch<{ user_id: number }>(userId, "/user/profile/basic");
+  return (await whoopFetch<{ user_id: number }>(userId, "/user/profile/basic"))!;
 }
