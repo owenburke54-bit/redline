@@ -1,9 +1,10 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { daysUntil, formatDate } from "@/lib/utils";
-import { Trophy, Zap, MessageSquare, ChevronRight } from "lucide-react";
+import { Zap, MessageSquare, ChevronRight } from "lucide-react";
 import { WhoopSyncButton } from "@/components/whoop/WhoopSyncButton";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 function recoveryColor(score: number): string {
   if (score >= 67) return "#22c55e";
@@ -66,6 +67,8 @@ export default async function DashboardPage() {
       take: 5,
     }),
   ]);
+
+  if (events.length === 0) redirect("/events");
 
   const whoopConnected = !!(user?.whoopAccessToken && user?.whoopId);
 
@@ -340,16 +343,6 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* Empty state */}
-      {events.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border/40 p-16 text-center">
-          <Trophy className="h-7 w-7 text-muted-foreground/20 mx-auto mb-4" />
-          <p className="font-semibold text-[13px] text-foreground">No events yet</p>
-          <p className="text-[11px] text-muted-foreground mt-1.5">
-            Add your first race to generate a training plan.
-          </p>
-        </div>
-      )}
     </div>
   );
 }

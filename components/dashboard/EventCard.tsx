@@ -4,7 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, MapPin, Target, Zap, Loader2, RefreshCw } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Trophy, MapPin, Target, Zap, Loader2, RefreshCw, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -34,8 +38,41 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 
 export function EventCard({ event }: EventCardProps) {
   const [generating, setGenerating] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editName, setEditName] = useState(event.name);
+  const [editDate, setEditDate] = useState(event.date.split("T")[0]);
+  const [editGoalTime, setEditGoalTime] = useState(event.goalTime ?? "");
+  const [editLocation, setEditLocation] = useState(event.location ?? "");
+  const [editPriority, setEditPriority] = useState(String(event.priority));
   const isHyrox = event.type.startsWith("HYROX");
   const accentColor = isHyrox ? "var(--hyrox-color)" : "var(--marathon-color)";
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/events/${event.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editName,
+          date: editDate,
+          goalTime: editGoalTime || null,
+          location: editLocation || null,
+          priority: Number(editPriority),
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      toast.success("Event updated.");
+      setEditOpen(false);
+      window.location.reload();
+    } catch {
+      toast.error("Failed to update event.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function generatePlan() {
     setGenerating(true);
@@ -82,6 +119,7 @@ export function EventCard({ event }: EventCardProps) {
   }
 
   return (
+    <>
     <div className="rounded-xl bg-card overflow-hidden">
       <div className="h-[3px]" style={{ backgroundColor: accentColor }} />
       <div className="p-5">
@@ -163,8 +201,81 @@ export function EventCard({ event }: EventCardProps) {
               )}
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setEditOpen(true)}
+            className="gap-1.5 text-[12px] h-8 text-muted-foreground hover:text-foreground ml-auto"
+          >
+            <Pencil className="h-3 w-3" /> Edit
+          </Button>
         </div>
       </div>
     </div>
+
+    <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Event</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={saveEdit} className="space-y-4 mt-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-name">Event name</Label>
+            <Input
+              id="edit-name"
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-date">Race date</Label>
+              <Input
+                id="edit-date"
+                type="date"
+                value={editDate}
+                onChange={e => setEditDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-goalTime">Goal time</Label>
+              <Input
+                id="edit-goalTime"
+                value={editGoalTime}
+                onChange={e => setEditGoalTime(e.target.value)}
+                placeholder="sub-4:00:00"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-location">Location</Label>
+              <Input
+                id="edit-location"
+                value={editLocation}
+                onChange={e => setEditLocation(e.target.value)}
+                placeholder="Washington, D.C."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Priority</Label>
+              <Select value={editPriority} onValueChange={setEditPriority}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">A Race</SelectItem>
+                  <SelectItem value="2">B Race</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Button type="submit" className="w-full" disabled={saving}>
+            {saving ? "Saving…" : "Save Changes"}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
