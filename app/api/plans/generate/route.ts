@@ -5,6 +5,9 @@ import { selectTemplate, buildPlan, summarizePlanForAI } from "@/lib/plans/planB
 import { buildPlanGenerationPrompt } from "@/lib/ai/coachPrompts";
 import { weeksUntil } from "@/lib/utils";
 import Anthropic from "@anthropic-ai/sdk";
+import { CLAUDE_MODEL } from "@/lib/ai/config";
+import { parseClaudeJson } from "@/lib/ai/parseJson";
+import { checkRateLimit } from "@/lib/ai/rateLimit";
 import { z } from "zod";
 
 const schema = z.object({
@@ -18,6 +21,15 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = session.user.id as string;
+
+  const { allowed, retryAfterSecs } = checkRateLimit(userId);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: `Rate limit reached. Try again in ${Math.ceil(retryAfterSecs / 60)} minutes.` },
+      { status: 429, headers: { "Retry-After": String(retryAfterSecs) } }
+    );
+  }
+
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
@@ -82,16 +94,13 @@ export async function POST(req: NextRequest) {
   let aiOverrides: unknown = null;
   try {
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
+      model: CLAUDE_MODEL,
       max_tokens: 2048,
       messages: [{ role: "user", content: prompt }],
     });
 
     const text = message.content[0].type === "text" ? message.content[0].text : "";
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      aiOverrides = JSON.parse(jsonMatch[0]);
-    }
+    aiOverrides = parseClaudeJson(text);
   } catch (err) {
     // If AI fails, proceed with template only
     console.error("AI plan generation failed:", err);

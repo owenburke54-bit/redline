@@ -5,6 +5,7 @@ import { TrainingLoadChart } from "@/components/progress/TrainingLoadChart";
 import { ConsistencyChart } from "@/components/progress/ConsistencyChart";
 import { WhoopConnectCard } from "@/components/whoop/WhoopConnectCard";
 import { ClassScheduleCard, type ClassSchedule } from "@/components/profile/ClassScheduleCard";
+import { ChartErrorBoundary } from "@/components/ui/ChartErrorBoundary";
 import { TrendingUp, CheckCircle2, Layers, Timer } from "lucide-react";
 
 export default async function ProgressPage() {
@@ -230,11 +231,13 @@ export default async function ProgressPage() {
             </div>
           </div>
           <div className="rounded border border-border bg-card p-4">
-            <TrainingLoadChart
-              data={weeklyData}
-              hasMarathon={hasMarathon}
-              hasHyrox={hasHyrox}
-            />
+            <ChartErrorBoundary label="Training Load">
+              <TrainingLoadChart
+                data={weeklyData}
+                hasMarathon={hasMarathon}
+                hasHyrox={hasHyrox}
+              />
+            </ChartErrorBoundary>
           </div>
         </section>
       ) : (
@@ -288,15 +291,17 @@ export default async function ProgressPage() {
             </p>
           </div>
           <div className="rounded border border-border bg-card p-4">
-            <ConsistencyChart
-              data={weeklyData.map(w => ({
-                label: w.label,
-                completed: w.completed,
-                planned: w.planned,
-                rate: w.rate,
-                isCurrentWeek: w.isCurrentWeek,
-              }))}
-            />
+            <ChartErrorBoundary label="Consistency">
+              <ConsistencyChart
+                data={weeklyData.map(w => ({
+                  label: w.label,
+                  completed: w.completed,
+                  planned: w.planned,
+                  rate: w.rate,
+                  isCurrentWeek: w.isCurrentWeek,
+                }))}
+              />
+            </ChartErrorBoundary>
           </div>
         </section>
       )}

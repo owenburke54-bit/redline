@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import Anthropic from "@anthropic-ai/sdk";
 import { buildCoachSystemPrompt } from "@/lib/ai/coachPrompts";
+import { CLAUDE_MODEL } from "@/lib/ai/config";
+import { checkRateLimit } from "@/lib/ai/rateLimit";
 import { formatWhoopContextForCoach } from "@/lib/whoop/sync";
 import { weeksUntil } from "@/lib/utils";
 
@@ -26,6 +28,15 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = session.user.id as string;
+
+  const { allowed, retryAfterSecs } = checkRateLimit(userId);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: `Rate limit reached. Try again in ${Math.ceil(retryAfterSecs / 60)} minutes.` },
+      { status: 429, headers: { "Retry-After": String(retryAfterSecs) } }
+    );
+  }
+
   const body = await req.json();
   const { messages = [], isInitial = false } = body as {
     messages: { role: "user" | "assistant"; content: string }[];
@@ -107,7 +118,7 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       try {
         const anthropicStream = anthropic.messages.stream({
-          model: "claude-sonnet-4-6",
+          model: CLAUDE_MODEL,
           max_tokens: 1024,
           system: systemPrompt,
           messages: conversationMessages,

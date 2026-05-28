@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import Anthropic from "@anthropic-ai/sdk";
+import { CLAUDE_MODEL } from "@/lib/ai/config";
+import { parseClaudeJson } from "@/lib/ai/parseJson";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -123,17 +125,17 @@ Return ONLY valid JSON:
   ]
 }`;
 
-  let aiResponse: { summary: string; actions: Array<{ action: string; workoutId: string; newDistance?: number }> } | null = null;
+  type AIResolveResponse = { summary: string; actions: Array<{ action: string; workoutId: string; newDistance?: number }> };
+  let aiResponse: AIResolveResponse | null = null;
 
   try {
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
+      model: CLAUDE_MODEL,
       max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
     });
     const text = message.content[0].type === "text" ? message.content[0].text : "";
-    const match = text.match(/\{[\s\S]*\}/);
-    if (match) aiResponse = JSON.parse(match[0]);
+    aiResponse = parseClaudeJson<AIResolveResponse>(text);
   } catch {
     return NextResponse.json({ error: "AI conflict resolution failed" }, { status: 500 });
   }

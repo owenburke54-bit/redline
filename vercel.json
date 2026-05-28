@@ -1,11 +1,11 @@
 {
   "crons": [
     {
-      "path": "/api/strava/sync",
+      "path": "/api/whoop/sync",
       "schedule": "0 6 * * *"
     },
     {
-      "path": "/api/whoop/sync",
+      "path": "/api/strava/sync",
       "schedule": "0 6 * * *"
     },
     {
