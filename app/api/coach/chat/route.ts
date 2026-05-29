@@ -92,7 +92,13 @@ export async function POST(req: NextRequest) {
     ? weekWorkouts.map(w => `${DAY_NAMES[w.scheduledDate.getDay()]}: ${w.title} (${w.status.toLowerCase()})`).join(", ")
     : "No workouts scheduled this week";
 
-  const whoopContext = formatWhoopContextForCoach(whoopActivities, todayRecovery);
+  const whoopConnected = !!(user?.whoopAccessToken && user?.whoopId);
+  const rawWhoopContext = formatWhoopContextForCoach(whoopActivities, todayRecovery);
+  const whoopContext = rawWhoopContext !== "No WHOOP data available"
+    ? rawWhoopContext
+    : whoopConnected
+    ? "WHOOP connected — no recovery data synced yet (posts each morning after sleep)"
+    : "WHOOP not connected";
 
   const systemPrompt = buildCoachSystemPrompt({
     athleteName: user?.name?.split(" ")[0] ?? "Athlete",
@@ -112,7 +118,7 @@ export async function POST(req: NextRequest) {
   const conversationMessages: { role: "user" | "assistant"; content: string }[] = isInitial
     ? [{
         role: "user",
-        content: `You are meeting this athlete for the first time. Acknowledge their specific upcoming events (${activeEvents.map(e => `${e.name} in ${e.weeksOut} weeks${e.goalTime ? ` targeting ${e.goalTime}` : ""}`).join(", ")}). ${whoopActivities.length > 0 ? `You can see their WHOOP data — acknowledge any other training you notice. ` : ""}Ask 1 targeted question about what their strength training currently looks like. Be direct and conversational. Under 80 words. No bullet points.`,
+        content: `You are meeting this athlete for the first time. Acknowledge their specific upcoming events (${activeEvents.map(e => `${e.name} in ${e.weeksOut} weeks${e.goalTime ? ` targeting ${e.goalTime}` : ""}`).join(", ")}). ${whoopActivities.length > 0 ? "You can see their WHOOP data — acknowledge any other training you notice. " : ""}Ask 1 targeted question about what their strength training currently looks like. Be direct and conversational. Under 80 words. No bullet points.`,
       }]
     : messages;
 
