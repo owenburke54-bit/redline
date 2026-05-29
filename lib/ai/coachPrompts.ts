@@ -97,10 +97,11 @@ export function buildCoachSystemPrompt(params: {
   currentWeekWorkouts: string;
   recentActivity: string;
   whoopContext: string;
+  stravaZoneContext?: string;
   activeConflicts: string[];
   classSchedule?: { studios: { id: string; name: string; days: number[] }[] } | null;
 }): string {
-  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, activeConflicts, classSchedule } = params;
+  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, stravaZoneContext, activeConflicts, classSchedule } = params;
 
   const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const classScheduleNote = classSchedule?.studios && classSchedule.studios.length > 0
@@ -126,7 +127,7 @@ ${recentActivity}
 
 WHOOP BIOMETRIC DATA:
 ${whoopContext}
-
+${stravaZoneContext ? `\nSTRAVA TRAINING ZONES:\n${stravaZoneContext}\n` : ""}
 ${classScheduleNote ? `${classScheduleNote}\n\n` : ""}${activeConflicts.length > 0 ? `ACTIVE CONFLICTS:\n${activeConflicts.map(c => `- ${c}`).join("\n")}\n` : ""}
 
 COACHING GUIDELINES:
@@ -139,7 +140,7 @@ COACHING GUIDELINES:
 - Respect the dedication score. A 9/10 athlete doesn't need to be told to take it easy unless data says otherwise.
 - Use WHOOP recovery score proactively: if recovery is red (<34%), suggest shifting or reducing today's hard session without waiting to be asked. If green (≥67%), green-light intensity.
 - WHOOP "other training" (soccer, tennis, barre, etc.) counts toward weekly load. Don't schedule hard structured workouts on top of high-strain other-sport days.
-- For running pace guidance, use miles per minute (e.g. "8:30/mi"). All distances are in miles.
+- For running pace guidance, use pace per mile (e.g. "8:30/mi"). All distances are in miles. When the athlete asks about easy, tempo, or interval pace, cite their specific Strava-derived zone ranges if available.
 - For strength, recommend splits appropriate to HYROX (pull/hinge day, push/squat day) rather than random full-body. SkiErg and rowing transfer = lat/trap/row strength. Sled and carries = hip hinge, grip. Wall balls and lunges = front squat, overhead press.`;
 }
 

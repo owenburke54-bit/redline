@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { daysUntil, formatDate } from "@/lib/utils";
 import { Zap, MessageSquare, ChevronRight } from "lucide-react";
 import { WhoopSyncButton } from "@/components/whoop/WhoopSyncButton";
+import { WhoopRings } from "@/components/whoop/WhoopRings";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -47,8 +48,9 @@ export default async function DashboardPage() {
   const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
   const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-  const [user, events, todayWorkouts, todayRecovery, recentActivities] = await Promise.all([
+  const [user, events, todayWorkouts, todayRecovery, recentActivities, todayAllActivities] = await Promise.all([
     db.user.findUnique({ where: { id: userId }, select: { id: true, name: true, dedicationScore: true, whoopAccessToken: true, whoopId: true } }),
     db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" }, include: { plan: { select: { id: true } } } }),
     db.workout.findMany({
@@ -66,11 +68,19 @@ export default async function DashboardPage() {
       select: { sportName: true, startDate: true, strain: true },
       take: 5,
     }),
+    db.whoopActivity.findMany({
+      where: { userId, startDate: { gte: twentyFourHoursAgo } },
+      select: { strain: true },
+    }),
   ]);
 
   if (events.length === 0) redirect("/events");
 
   const whoopConnected = !!(user?.whoopAccessToken && user?.whoopId);
+
+  const todayStrain = todayAllActivities.length > 0
+    ? todayAllActivities.reduce((sum, a) => sum + a.strain, 0)
+    : null;
 
   const recentHighStrain = recentActivities.find(
     a => a.strain >= 10 && a.startDate >= fortyEightHoursAgo
@@ -108,84 +118,34 @@ export default async function DashboardPage() {
           </div>
           {todayRecovery ? (
             <div className="rounded-xl bg-card overflow-hidden">
-              <div className="h-[3px]" style={{ backgroundColor: recoveryColor(todayRecovery.recoveryScore) }} />
+              <div
+                className="h-[3px]"
+                style={{
+                  backgroundColor:
+                    todayRecovery.recoveryScore >= 67
+                      ? "#22c55e"
+                      : todayRecovery.recoveryScore >= 34
+                      ? "#f59e0b"
+                      : "#ef4444",
+                }}
+              />
               <div className="p-5">
-                {(() => {
-                  const daysAgo = Math.floor((Date.now() - todayRecovery.date.getTime()) / 86400000);
-                  return daysAgo > 1 ? (
-                    <p className="text-[10px] text-amber-400/70 mb-3">
-                      From {todayRecovery.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} — tap Sync to refresh
-                    </p>
-                  ) : null;
-                })()}
-                <div className="flex items-start gap-6">
-                  {/* Big score */}
-                  <div className="shrink-0">
-                    <p
-                      className="text-[3.25rem] font-black tabular-nums leading-none"
-                      style={{ color: recoveryColor(todayRecovery.recoveryScore) }}
-                    >
-                      {Math.round(todayRecovery.recoveryScore)}
-                      <span className="text-[1.5rem] font-bold">%</span>
-                    </p>
-                    <p
-                      className="text-[10px] font-bold tracking-[0.15em] uppercase mt-1"
-                      style={{ color: recoveryColor(todayRecovery.recoveryScore) }}
-                    >
-                      {recoveryLabel(todayRecovery.recoveryScore)}
-                    </p>
-                  </div>
-
-                  {/* Biometrics + impact */}
-                  <div className="flex-1 min-w-0 pt-1">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                      {todayRecovery.hrvRmssd && (
-                        <div>
-                          <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase">HRV</p>
-                          <p className="text-[13px] font-bold tabular-nums">{Math.round(todayRecovery.hrvRmssd)}ms</p>
-                        </div>
-                      )}
-                      {todayRecovery.restingHr && (
-                        <div>
-                          <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase">RHR</p>
-                          <p className="text-[13px] font-bold tabular-nums">{Math.round(todayRecovery.restingHr)}bpm</p>
-                        </div>
-                      )}
-                      {todayRecovery.sleepDuration && (
-                        <div>
-                          <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase">Sleep</p>
-                          <p className="text-[13px] font-bold tabular-nums">{(todayRecovery.sleepDuration / 60).toFixed(1)}h</p>
-                        </div>
-                      )}
-                      {todayRecovery.sleepScore && (
-                        <div>
-                          <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase">Sleep score</p>
-                          <p className="text-[13px] font-bold tabular-nums">{Math.round(todayRecovery.sleepScore)}%</p>
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      {trainingImpact(todayRecovery.recoveryScore, todayWorkoutTitle, recentHighStrain)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Recent other activities */}
-                {recentActivities.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap gap-2">
-                    {recentActivities.map((a, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold bg-white/5 text-muted-foreground"
-                      >
-                        {a.sportName}
-                        <span className="text-muted-foreground/50">
-                          {a.startDate.toLocaleDateString("en-US", { weekday: "short" })} · {a.strain.toFixed(1)} strain
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <WhoopRings
+                  recoveryScore={todayRecovery.recoveryScore}
+                  strain={todayStrain}
+                  sleepScore={todayRecovery.sleepScore ?? null}
+                  sleepDuration={todayRecovery.sleepDuration ?? null}
+                  hrvRmssd={todayRecovery.hrvRmssd ?? null}
+                  restingHr={todayRecovery.restingHr ?? null}
+                  impactText={trainingImpact(todayRecovery.recoveryScore, todayWorkoutTitle, recentHighStrain)}
+                  staleLabel={(() => {
+                    const daysAgo = Math.floor((Date.now() - todayRecovery.date.getTime()) / 86400000);
+                    return daysAgo > 1
+                      ? `From ${todayRecovery.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} — tap Sync to refresh`
+                      : null;
+                  })()}
+                  recentActivities={recentActivities}
+                />
               </div>
             </div>
           ) : (

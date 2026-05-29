@@ -8,6 +8,7 @@ import { checkRateLimit } from "@/lib/ai/rateLimit";
 import { formatWhoopContextForCoach } from "@/lib/whoop/sync";
 import { weeksUntil } from "@/lib/utils";
 import { classScheduleSchema } from "@/lib/validation/schemas";
+import { computeTrainingZones, buildStravaZoneContext } from "@/lib/strava/zones";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [user, profile, events, weekWorkouts, whoopActivities, todayRecovery] = await Promise.all([
+  const [user, profile, events, weekWorkouts, whoopActivities, todayRecovery, stravaRuns] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.athleteProfile.findUnique({ where: { userId } }),
     db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" } }),
@@ -68,6 +69,12 @@ export async function POST(req: NextRequest) {
       where: { userId },
       orderBy: { date: "desc" },
       select: { recoveryScore: true, hrvRmssd: true, restingHr: true, sleepScore: true, sleepDuration: true },
+    }),
+    db.stravaActivity.findMany({
+      where: { userId, type: { in: ["Run", "VirtualRun", "TrailRun"] } },
+      select: { distance: true, movingTime: true, averageSpeed: true, startDate: true },
+      orderBy: { startDate: "desc" },
+      take: 100,
     }),
   ]);
 
@@ -93,6 +100,7 @@ export async function POST(req: NextRequest) {
     : "No workouts scheduled this week";
 
   const whoopConnected = !!(user?.whoopAccessToken && user?.whoopId);
+  const stravaConnected = !!(user?.stravaAccessToken && user?.stravaId);
   const rawWhoopContext = formatWhoopContextForCoach(whoopActivities, todayRecovery);
   const whoopContext = rawWhoopContext !== "No WHOOP data available"
     ? rawWhoopContext
@@ -100,14 +108,24 @@ export async function POST(req: NextRequest) {
     ? "WHOOP connected — no recovery data synced yet (posts each morning after sleep)"
     : "WHOOP not connected";
 
+  const zones = computeTrainingZones(stravaRuns);
+  const stravaZoneContext = stravaConnected
+    ? buildStravaZoneContext(zones, todayRecovery?.recoveryScore ?? null)
+    : undefined;
+
   const systemPrompt = buildCoachSystemPrompt({
     athleteName: user?.name?.split(" ")[0] ?? "Athlete",
     dedicationScore: user?.dedicationScore ?? 7,
     profileSummary,
     activeEvents,
     currentWeekWorkouts: weekWorkoutsSummary,
-    recentActivity: "Strava not connected — no recent activity data available.",
+    recentActivity: stravaConnected
+      ? zones.runCount > 0
+        ? `${zones.runCount} runs in Strava (avg ${zones.avgWeeklyMiles} mi/wk over last 4 weeks)`
+        : "Strava connected — no runs synced yet."
+      : "Strava not connected.",
     whoopContext,
+    stravaZoneContext,
     activeConflicts: [],
     classSchedule: (() => {
       const r = classScheduleSchema.safeParse(profile?.classSchedule);

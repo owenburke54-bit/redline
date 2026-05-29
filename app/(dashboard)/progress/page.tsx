@@ -7,6 +7,7 @@ import { WhoopConnectCard } from "@/components/whoop/WhoopConnectCard";
 import { ClassScheduleCard } from "@/components/profile/ClassScheduleCard";
 import { classScheduleSchema, type ClassSchedule } from "@/lib/validation/schemas";
 import { ChartErrorBoundary } from "@/components/ui/ChartErrorBoundary";
+import { StravaSyncButton } from "@/components/strava/StravaSyncButton";
 import { TrendingUp, CheckCircle2, Layers, Timer } from "lucide-react";
 
 export default async function ProgressPage() {
@@ -28,11 +29,12 @@ export default async function ProgressPage() {
 
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { whoopAccessToken: true, whoopId: true },
+    select: { whoopAccessToken: true, whoopId: true, stravaAccessToken: true, stravaId: true },
   });
   const whoopConnected = !!(user?.whoopAccessToken && user?.whoopId);
+  const stravaConnected = !!(user?.stravaAccessToken && user?.stravaId);
 
-  const [classScheduleProfile, [lastActivity, todayRecovery]] = await Promise.all([
+  const [classScheduleProfile, [lastActivity, todayRecovery], stravaStats] = await Promise.all([
     db.athleteProfile.findUnique({ where: { userId }, select: { classSchedule: true } }),
     whoopConnected
     ? Promise.all([
@@ -48,6 +50,13 @@ export default async function ProgressPage() {
         }),
       ])
     : [null, null] as [null, null],
+    stravaConnected
+      ? db.stravaActivity.aggregate({
+          where: { userId },
+          _count: { id: true },
+          _max: { startDate: true },
+        })
+      : null,
   ]);
 
   const [workouts, plans] = await Promise.all([
@@ -313,13 +322,52 @@ export default async function ProgressPage() {
 
       {/* Wearables */}
       <section>
-        <h2 className="text-sm font-semibold mb-3">Wearables</h2>
-        <WhoopConnectCard
-          connected={whoopConnected}
-          recoveryScore={todayRecovery?.recoveryScore ?? null}
-          recoveryDate={todayRecovery?.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) ?? null}
-          lastActivityDate={lastActivity?.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) ?? null}
-        />
+        <h2 className="text-sm font-semibold mb-3">Wearables &amp; Connections</h2>
+        <div className="space-y-3">
+          <WhoopConnectCard
+            connected={whoopConnected}
+            recoveryScore={todayRecovery?.recoveryScore ?? null}
+            recoveryDate={todayRecovery?.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) ?? null}
+            lastActivityDate={lastActivity?.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) ?? null}
+          />
+          {/* Strava */}
+          <div className="rounded border border-border bg-card p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded text-white text-[10px] font-black" style={{ backgroundColor: "#fc4c02" }}>
+                  S
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Strava</p>
+                  {stravaConnected ? (
+                    <p className="text-xs text-muted-foreground">
+                      {stravaStats?._count.id
+                        ? `${stravaStats._count.id} activities synced`
+                        : "Connected — sync to import activities"}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Connect to power pace zone guidance</p>
+                  )}
+                </div>
+              </div>
+              {stravaConnected ? (
+                <StravaSyncButton />
+              ) : (
+                <a
+                  href="/api/strava/auth"
+                  className="inline-flex items-center rounded px-3 py-1.5 text-xs font-semibold bg-foreground text-background hover:opacity-80 transition-opacity"
+                >
+                  Connect Strava
+                </a>
+              )}
+            </div>
+            {stravaConnected && stravaStats?._max.startDate && (
+              <p className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border">
+                Last activity: {stravaStats._max.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              </p>
+            )}
+          </div>
+        </div>
       </section>
 
       {/* Studio classes */}
