@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getMonday } from "@/lib/utils";
 import { WeekRow, type WeekRowData, type WorkoutRowData } from "@/components/plan/WeekRow";
 import { ResolveConflictsButton } from "@/components/plan/ResolveConflictsButton";
+import { PlanStatusToggle } from "@/components/plan/PlanStatusToggle";
 import { Trophy, Target, CalendarDays } from "lucide-react";
 import Link from "next/link";
 
@@ -66,6 +67,8 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
       targetPace: w.targetPace,
       status: w.status,
       dayOfWeek,
+      perceivedEffort: w.perceivedEffort,
+      actualDistance: w.actualDistance,
     });
   }
 
@@ -161,6 +164,9 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
         </Link>
         <ResolveConflictsButton />
       </div>
+
+      {/* Pause/resume toggle — shows banner when paused, ghost button when active */}
+      <PlanStatusToggle planId={plan.id} initialStatus={plan.status} />
 
       {/* Header */}
       <div className="flex items-start justify-between gap-6">
@@ -283,6 +289,7 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
                   key={week.weekNumber}
                   week={week}
                   defaultExpanded={week.isCurrentWeek}
+                  planIsPaused={plan.status === "PAUSED"}
                 />
               ))}
             </div>
