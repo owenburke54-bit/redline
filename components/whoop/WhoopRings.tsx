@@ -74,7 +74,7 @@ function RingGauge({
 }
 
 interface WhoopRingsProps {
-  recoveryScore: number;
+  recoveryScore: number | null;
   strain: number | null;
   sleepScore: number | null;
   sleepDuration: number | null;
@@ -97,7 +97,13 @@ export function WhoopRings({
   recentActivities,
 }: WhoopRingsProps) {
   const rColor =
-    recoveryScore >= 67 ? "#22c55e" : recoveryScore >= 34 ? "#f59e0b" : "#ef4444";
+    recoveryScore == null
+      ? "rgba(255,255,255,0.2)"
+      : recoveryScore >= 67
+      ? "#22c55e"
+      : recoveryScore >= 34
+      ? "#f59e0b"
+      : "#ef4444";
   const strainColor = "#3b82f6";
 
   const sleepColor =
@@ -130,7 +136,7 @@ export function WhoopRings({
           value={recoveryScore}
           max={100}
           color={rColor}
-          displayValue={`${Math.round(recoveryScore)}%`}
+          displayValue={recoveryScore != null ? `${Math.round(recoveryScore)}%` : "—"}
           label="Recovery"
         />
 
