@@ -169,12 +169,12 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
       <PlanStatusToggle planId={plan.id} initialStatus={plan.status} />
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-6">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
           <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-2">
             Training Plan
           </p>
-          <h1 className="text-[2.5rem] font-black tracking-tight leading-none">{plan.event.name}</h1>
+          <h1 className="text-[1.75rem] sm:text-[2.5rem] font-black tracking-tight leading-none">{plan.event.name}</h1>
           <div className="flex items-center gap-4 mt-3 flex-wrap">
             <span className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
               <CalendarDays className="h-3.5 w-3.5" />
@@ -192,7 +192,7 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
           </div>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-[3.5rem] font-black tabular-nums leading-none" style={{ color: accentColor }}>
+          <p className="text-[2.5rem] sm:text-[3.5rem] font-black tabular-nums leading-none" style={{ color: accentColor }}>
             {daysOut}
           </p>
           <p className="text-[9px] font-semibold tracking-[0.18em] text-muted-foreground/30 uppercase mt-1">days out</p>
@@ -200,7 +200,7 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
       </div>
 
       {/* Stat row */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Weeks", value: `${plan.currentWeek} / ${plan.totalWeeks}`, sub: "current" },
           { label: "Miles logged", value: `${completedMiles}`, sub: `of ${totalPlannedMiles} planned` },
@@ -246,8 +246,8 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
         </div>
       </div>
 
-      {/* Day-of-week column headers */}
-      <div className="flex items-center gap-4 px-4">
+      {/* Day-of-week column headers — desktop only, matches WeekRow day grid */}
+      <div className="hidden md:flex items-center gap-4 px-4">
         <div className="w-10" />
         <div className="grid gap-1 flex-1" style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(d => (

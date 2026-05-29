@@ -149,8 +149,9 @@ export function CalendarView({ workouts, currentWeekStart }: CalendarViewProps) 
         </div>
       )}
 
-      {/* Week grid */}
-      <div className="grid grid-cols-7 gap-2">
+      {/* Week grid — horizontally scrollable on mobile */}
+      <div className="overflow-x-auto">
+      <div className="grid grid-cols-7 gap-2 min-w-[560px]">
         {/* Day headers */}
         {days.map((day, i) => {
           const isToday = isSameDay(day, today);
@@ -188,6 +189,7 @@ export function CalendarView({ workouts, currentWeekStart }: CalendarViewProps) 
           </div>
         ))}
       </div>
+      </div>{/* end overflow-x-auto */}
 
       {/* Empty state */}
       {workouts.length === 0 && (

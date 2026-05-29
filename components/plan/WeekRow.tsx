@@ -53,7 +53,7 @@ const TYPE_LABELS: Record<string, string> = {
   STRENGTH: "Strength", CROSS_TRAIN: "Cross-Train", REST: "Rest", RACE: "Race",
 };
 
-const ZONE_LABELS: Record<number, string> = {
+export const ZONE_LABELS: Record<number, string> = {
   1: "Recovery", 2: "Easy aerobic", 3: "Aerobic", 4: "Threshold", 5: "VO₂ max",
 };
 
@@ -135,10 +135,10 @@ function WorkoutStatusButtons({
         className="flex items-center gap-1 opacity-30 cursor-not-allowed"
         title="Plan is paused — resume to log workouts"
       >
-        <div className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground/30">
+        <div className="h-10 w-10 md:h-7 md:w-7 rounded flex items-center justify-center text-muted-foreground/30">
           <Check className="h-3.5 w-3.5" />
         </div>
-        <div className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground/30">
+        <div className="h-10 w-10 md:h-7 md:w-7 rounded flex items-center justify-center text-muted-foreground/30">
           <X className="h-3.5 w-3.5" />
         </div>
       </div>
@@ -150,7 +150,7 @@ function WorkoutStatusButtons({
       <button
         onClick={() => patch("SCHEDULED")}
         disabled={loading}
-        className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-2.5 md:px-2 md:py-1 rounded text-[10px] font-bold transition-colors"
         style={{ color: "#22c55e", background: "rgba(34,197,94,0.1)" }}
         title="Mark as not done"
       >
@@ -163,7 +163,7 @@ function WorkoutStatusButtons({
       <button
         onClick={() => patch("SCHEDULED")}
         disabled={loading}
-        className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-2.5 md:px-2 md:py-1 rounded text-[10px] font-bold transition-colors"
         style={{ color: "#ef4444", background: "rgba(239,68,68,0.1)" }}
         title="Mark as not skipped"
       >
@@ -172,11 +172,11 @@ function WorkoutStatusButtons({
     );
   }
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5">
       <button
         onClick={() => patch("COMPLETED")}
         disabled={loading}
-        className="h-6 w-6 rounded flex items-center justify-center transition-colors hover:bg-green-500/20 text-muted-foreground/30 hover:text-green-400"
+        className="h-10 w-10 md:h-7 md:w-7 rounded flex items-center justify-center transition-colors hover:bg-green-500/20 text-muted-foreground/30 hover:text-green-400"
         title="Mark complete"
       >
         <Check className="h-3.5 w-3.5" />
@@ -184,7 +184,7 @@ function WorkoutStatusButtons({
       <button
         onClick={() => patch("SKIPPED")}
         disabled={loading}
-        className="h-6 w-6 rounded flex items-center justify-center transition-colors hover:bg-red-500/20 text-muted-foreground/30 hover:text-red-400"
+        className="h-10 w-10 md:h-7 md:w-7 rounded flex items-center justify-center transition-colors hover:bg-red-500/20 text-muted-foreground/30 hover:text-red-400"
         title="Mark skipped"
       >
         <X className="h-3.5 w-3.5" />
@@ -207,7 +207,6 @@ export function WeekRow({
 
   const editWorkout = editId ? week.workouts.find(w => w.id === editId) ?? null : null;
 
-  // Build a slot array indexed by day-of-week (0=Mon…6=Sun)
   const slots: (WorkoutRowData | undefined)[] = Array(7).fill(undefined);
   for (const w of week.workouts) {
     if (w.dayOfWeek >= 0 && w.dayOfWeek <= 6) slots[w.dayOfWeek] = w;
@@ -245,28 +244,45 @@ export function WeekRow({
           boxShadow: week.isCurrentWeek ? `0 0 0 1px ${week.accentColor}20` : "none",
         }}
       >
-        {/* Week row header — always visible */}
+        {/* Week row header */}
         <button
           onClick={() => setExpanded(e => !e)}
-          className="w-full text-left px-4 py-3 flex items-center gap-4 group"
+          className="w-full text-left px-4 py-3 flex items-center gap-3 group"
         >
           {/* Week number */}
-          <div className="shrink-0 w-10 text-right">
+          <div className="shrink-0 w-8 text-right">
             <span className="text-[11px] font-black tabular-nums"
               style={{ color: week.isCurrentWeek ? week.accentColor : "rgba(255,255,255,0.3)" }}>
               W{week.weekNumber}
             </span>
           </div>
 
-          {/* Day grid */}
-          <div className="grid gap-1 flex-1" style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
+          {/* Mobile: compact session summary */}
+          <div className="flex-1 md:hidden flex items-center gap-2 min-w-0">
+            <span className="text-[11px] text-muted-foreground/50 tabular-nums shrink-0">
+              {week.nonRestCount} session{week.nonRestCount !== 1 ? "s" : ""}
+              {week.totalMiles > 0 && `, ${week.totalMiles}mi`}
+            </span>
+            {week.keySession && keyStyle && (
+              <span
+                className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 truncate"
+                style={{ background: keyStyle.bg, color: keyStyle.text }}
+              >
+                {TYPE_LABELS[week.keySession.type] ?? week.keySession.type}
+                {week.keySession.targetDistance ? ` · ${week.keySession.targetDistance}mi` : ""}
+              </span>
+            )}
+          </div>
+
+          {/* Desktop: 7-column day grid */}
+          <div className="hidden md:grid gap-1 flex-1" style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
             {slots.map((w, i) => (
               <WorkoutDayBlock key={i} workout={w} />
             ))}
           </div>
 
-          {/* Volume */}
-          <div className="shrink-0 w-14 text-right">
+          {/* Volume — desktop only (shown inline on mobile summary) */}
+          <div className="shrink-0 w-12 text-right hidden md:block">
             {week.totalMiles > 0 && (
               <>
                 <p className="text-[13px] font-black tabular-nums leading-none"
@@ -278,7 +294,7 @@ export function WeekRow({
             )}
           </div>
 
-          {/* Key session */}
+          {/* Key session — desktop only */}
           <div className="shrink-0 w-36 hidden md:block">
             {week.keySession && keyStyle && (
               <span
@@ -293,7 +309,7 @@ export function WeekRow({
           </div>
 
           {/* Completion / current badge */}
-          <div className="shrink-0 w-12 text-right">
+          <div className="shrink-0 w-10 md:w-12 text-right">
             {week.isCurrentWeek ? (
               <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
                 style={{ background: `${week.accentColor}20`, color: week.accentColor }}>
@@ -307,7 +323,6 @@ export function WeekRow({
             ) : null}
           </div>
 
-          {/* Expand toggle */}
           <ChevronDown
             className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 text-muted-foreground/30 group-hover:text-muted-foreground/60"
             style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
@@ -318,8 +333,8 @@ export function WeekRow({
         {expanded && (
           <div className="px-4 pb-4 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
             <div className="mt-3 space-y-1">
-              {/* Day column labels */}
-              <div className="grid gap-1 px-14 mb-2" style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
+              {/* Day column labels — desktop only */}
+              <div className="hidden md:grid gap-1 px-14 mb-2" style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
                 {DAY_LABELS.map((d, i) => (
                   <p key={i} className="text-center text-[9px] font-semibold tracking-widest uppercase"
                     style={{ color: "rgba(255,255,255,0.2)" }}>
@@ -337,10 +352,10 @@ export function WeekRow({
                   return (
                     <div key={w.id} className="flex items-start gap-3 rounded-lg px-3 py-2.5"
                       style={{ background: "rgba(255,255,255,0.03)" }}>
-                      <span className="text-[9px] font-semibold text-muted-foreground/40 w-6 mt-0.5 shrink-0 uppercase">
+                      <span className="text-[9px] font-semibold text-muted-foreground/40 w-6 mt-1 shrink-0 uppercase">
                         {DAY_LABELS[w.dayOfWeek]}
                       </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold shrink-0"
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold shrink-0 mt-0.5"
                         style={{ background: s.bg, color: s.text, border: `1px solid ${s.border}` }}>
                         {TYPE_LABELS[w.type] ?? w.type}
                       </span>
@@ -360,7 +375,7 @@ export function WeekRow({
                         {w.targetPace && (
                           <p className="text-[10px] text-muted-foreground/50">{w.targetPace}/mi</p>
                         )}
-                        <div className="flex items-center gap-1 justify-end">
+                        <div className="flex items-center gap-0.5 justify-end">
                           <WorkoutStatusButtons
                             workoutId={w.id}
                             status={w.status}
@@ -369,7 +384,7 @@ export function WeekRow({
                           <button
                             type="button"
                             onClick={() => setEditId(w.id)}
-                            className="h-6 w-6 rounded flex items-center justify-center transition-colors hover:bg-white/10 text-muted-foreground/20 hover:text-muted-foreground/60"
+                            className="h-10 w-10 md:h-7 md:w-7 rounded flex items-center justify-center transition-colors hover:bg-white/10 text-muted-foreground/20 hover:text-muted-foreground/60"
                             title="Edit workout"
                           >
                             <Pencil className="h-3 w-3" />
@@ -386,6 +401,3 @@ export function WeekRow({
     </>
   );
 }
-
-// Keep the ZONE_LABELS export available for any future consumers
-export { ZONE_LABELS };

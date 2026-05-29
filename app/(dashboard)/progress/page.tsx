@@ -230,14 +230,16 @@ export default async function ProgressPage() {
               )}
             </div>
           </div>
-          <div className="rounded border border-border bg-card p-4">
-            <ChartErrorBoundary label="Training Load">
-              <TrainingLoadChart
-                data={weeklyData}
-                hasMarathon={hasMarathon}
-                hasHyrox={hasHyrox}
-              />
-            </ChartErrorBoundary>
+          <div className="overflow-x-auto">
+            <div className="rounded border border-border bg-card p-4 min-w-[480px]">
+              <ChartErrorBoundary label="Training Load">
+                <TrainingLoadChart
+                  data={weeklyData}
+                  hasMarathon={hasMarathon}
+                  hasHyrox={hasHyrox}
+                />
+              </ChartErrorBoundary>
+            </div>
           </div>
         </section>
       ) : (
@@ -290,18 +292,20 @@ export default async function ProgressPage() {
               Completed vs planned sessions per week
             </p>
           </div>
-          <div className="rounded border border-border bg-card p-4">
-            <ChartErrorBoundary label="Consistency">
-              <ConsistencyChart
-                data={weeklyData.map(w => ({
-                  label: w.label,
-                  completed: w.completed,
-                  planned: w.planned,
-                  rate: w.rate,
-                  isCurrentWeek: w.isCurrentWeek,
-                }))}
-              />
-            </ChartErrorBoundary>
+          <div className="overflow-x-auto">
+            <div className="rounded border border-border bg-card p-4 min-w-[480px]">
+              <ChartErrorBoundary label="Consistency">
+                <ConsistencyChart
+                  data={weeklyData.map(w => ({
+                    label: w.label,
+                    completed: w.completed,
+                    planned: w.planned,
+                    rate: w.rate,
+                    isCurrentWeek: w.isCurrentWeek,
+                  }))}
+                />
+              </ChartErrorBoundary>
+            </div>
           </div>
         </section>
       )}

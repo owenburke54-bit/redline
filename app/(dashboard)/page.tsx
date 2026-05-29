@@ -138,7 +138,7 @@ export default async function DashboardPage() {
 
                   {/* Biometrics + impact */}
                   <div className="flex-1 min-w-0 pt-1">
-                    <div className="flex items-center gap-4 mb-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                       {todayRecovery.hrvRmssd && (
                         <div>
                           <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase">HRV</p>

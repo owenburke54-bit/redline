@@ -228,7 +228,7 @@ export function EventCard({ event }: EventCardProps) {
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="edit-date">Race date</Label>
               <Input
@@ -249,7 +249,7 @@ export function EventCard({ event }: EventCardProps) {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="edit-location">Location</Label>
               <Input

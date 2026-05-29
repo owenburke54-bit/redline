@@ -11,7 +11,7 @@ export function FloatingCoachButton() {
   return (
     <Link
       href="/coach"
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full px-4 py-3 shadow-lg transition-all hover:scale-105 active:scale-95"
+      className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 flex items-center gap-2.5 rounded-full px-4 py-3 shadow-lg transition-all hover:scale-105 active:scale-95"
       style={{
         background: "linear-gradient(135deg, rgba(249,115,22,0.9), rgba(234,88,12,0.9))",
         boxShadow: "0 4px 24px rgba(249,115,22,0.35)",
