@@ -7,6 +7,7 @@ import { CLAUDE_MODEL } from "@/lib/ai/config";
 import { checkRateLimit } from "@/lib/ai/rateLimit";
 import { formatWhoopContextForCoach } from "@/lib/whoop/sync";
 import { weeksUntil } from "@/lib/utils";
+import { classScheduleSchema } from "@/lib/validation/schemas";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -102,7 +103,10 @@ export async function POST(req: NextRequest) {
     recentActivity: "Strava not connected — no recent activity data available.",
     whoopContext,
     activeConflicts: [],
-    classSchedule: profile?.classSchedule as { studios: { id: string; name: string; days: number[] }[] } | null ?? null,
+    classSchedule: (() => {
+      const r = classScheduleSchema.safeParse(profile?.classSchedule);
+      return r.success ? r.data : null;
+    })(),
   });
 
   const conversationMessages: { role: "user" | "assistant"; content: string }[] = isInitial

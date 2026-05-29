@@ -4,7 +4,8 @@ import { getMonday } from "@/lib/utils";
 import { TrainingLoadChart } from "@/components/progress/TrainingLoadChart";
 import { ConsistencyChart } from "@/components/progress/ConsistencyChart";
 import { WhoopConnectCard } from "@/components/whoop/WhoopConnectCard";
-import { ClassScheduleCard, type ClassSchedule } from "@/components/profile/ClassScheduleCard";
+import { ClassScheduleCard } from "@/components/profile/ClassScheduleCard";
+import { classScheduleSchema, type ClassSchedule } from "@/lib/validation/schemas";
 import { ChartErrorBoundary } from "@/components/ui/ChartErrorBoundary";
 import { TrendingUp, CheckCircle2, Layers, Timer } from "lucide-react";
 
@@ -324,7 +325,7 @@ export default async function ProgressPage() {
       {/* Studio classes */}
       <section>
         <h2 className="text-sm font-semibold mb-3">Studio Classes</h2>
-        <ClassScheduleCard initial={classScheduleProfile?.classSchedule as ClassSchedule | null} />
+        <ClassScheduleCard initial={(() => { const r = classScheduleSchema.safeParse(classScheduleProfile?.classSchedule); return r.success ? r.data : null; })()} />
       </section>
     </div>
   );

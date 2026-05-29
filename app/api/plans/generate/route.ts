@@ -9,6 +9,7 @@ import { CLAUDE_MODEL } from "@/lib/ai/config";
 import { parseClaudeJson } from "@/lib/ai/parseJson";
 import { checkRateLimit } from "@/lib/ai/rateLimit";
 import { z } from "zod";
+import { aiOverridesSchema } from "@/lib/validation/schemas";
 
 const schema = z.object({
   eventId: z.string(),
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
   });
 
   // Call Claude for AI delta
-  let aiOverrides: unknown = null;
+  let aiOverrides: object | null = null;
   try {
     const message = await anthropic.messages.create({
       model: CLAUDE_MODEL,
@@ -100,7 +101,13 @@ export async function POST(req: NextRequest) {
     });
 
     const text = message.content[0].type === "text" ? message.content[0].text : "";
-    aiOverrides = parseClaudeJson(text);
+    const parsed = parseClaudeJson(text);
+    const validated = aiOverridesSchema.safeParse(parsed);
+    if (validated.success) {
+      aiOverrides = validated.data as object;
+    } else {
+      console.warn("AI overrides failed schema validation — proceeding with template only", validated.error.flatten());
+    }
   } catch (err) {
     // If AI fails, proceed with template only
     console.error("AI plan generation failed:", err);

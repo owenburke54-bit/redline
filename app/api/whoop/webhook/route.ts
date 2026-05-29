@@ -2,16 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import { after } from "next/server";
 import { db } from "@/lib/db";
 import { syncWorkoutById, syncRecoveryById } from "@/lib/whoop/sync";
+import { z } from "zod";
 
-// WHOOP sends one of these event types
-type WhoopEventType = "workout.updated" | "recovery.updated" | "sleep.updated";
-
-interface WhoopWebhookPayload {
-  type: WhoopEventType;
-  id: number;       // resource ID (workout ID or cycle ID)
-  user_id: number;  // WHOOP user ID — maps to User.whoopId
-  trace_id: string;
-}
+/**
+ * WHOOP Webhook Integration
+ *
+ * WHOOP sends POST requests to this endpoint when a user's data changes.
+ * Each event carries a resource ID and the user's WHOOP numeric user_id.
+ *
+ * Signature verification:
+ *   Header: x-whoop-signature (base64 HMAC-SHA256 of the raw request body)
+ *   Secret: WHOOP_WEBHOOK_SECRET env var — must match the secret configured
+ *   in the WHOOP Developer Portal webhook settings.
+ *
+ * Event types:
+ *   workout.updated   → id is the WHOOP workout ID; calls syncWorkoutById
+ *   recovery.updated  → id is the WHOOP cycle ID; calls syncRecoveryById
+ *   sleep.updated     → id is the WHOOP cycle ID; recovery record embeds sleep
+ *
+ * Flow: verify → parse → 200 immediately → sync in background via after()
+ */
+const whoopPayloadSchema = z.object({
+  type: z.enum(["workout.updated", "recovery.updated", "sleep.updated"]),
+  id: z.number().int(),
+  user_id: z.number().int(),
+  trace_id: z.string(),
+});
 
 async function verifySignature(rawBody: string, signature: string): Promise<boolean> {
   const secret = process.env.WHOOP_WEBHOOK_SECRET;
@@ -46,14 +62,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  let payload: WhoopWebhookPayload;
+  let parsed: z.infer<typeof whoopPayloadSchema>;
   try {
-    payload = JSON.parse(rawBody);
+    parsed = whoopPayloadSchema.parse(JSON.parse(rawBody));
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const { type, id, user_id } = payload;
+  const { type, id, user_id } = parsed;
 
   // Resolve WHOOP user_id → our internal userId
   const user = await db.user.findUnique({
