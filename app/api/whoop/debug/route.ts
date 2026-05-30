@@ -29,25 +29,30 @@ export async function GET() {
     return { status: res.status, body };
   }
 
-  // Get most recent completed cycle ID to test recovery-by-cycle-id
-  const cyclesRes = await hit("/cycle", { start: start.toISOString(), end: now.toISOString(), limit: "5" });
+  // Decode JWT payload to inspect granted scopes (no verification needed, just inspection)
+  let tokenScopes: string | null = null;
+  try {
+    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString());
+    tokenScopes = payload.scope ?? payload.scopes ?? JSON.stringify(payload);
+  } catch { tokenScopes = "could not decode"; }
+
+  const cyclesRes = await hit("/cycle", { start: start.toISOString(), end: now.toISOString(), limit: "3" });
   const completedCycleId = cyclesRes.status === 200
     ? cyclesRes.body?.records?.find((r: { end: string | null; id: number }) => r.end != null)?.id
     : null;
 
-  const [workouts, recoveryList, recoveryByIdResult, sleepList, profile] = await Promise.all([
-    hit("/activity/workout", { start: start.toISOString(), end: now.toISOString(), limit: "5" }),
+  const [recoveryList, recoveryById, sleepList, cycleById] = await Promise.all([
     hit("/recovery", { limit: "5" }),
     completedCycleId ? hit(`/recovery/${completedCycleId}`) : Promise.resolve({ status: 0, body: "no completed cycle" }),
-    hit("/sleep", { start: start.toISOString(), end: now.toISOString(), limit: "5" }),
-    hit("/user/profile/basic"),
+    hit("/sleep", { limit: "5" }),
+    completedCycleId ? hit(`/cycle/${completedCycleId}`) : Promise.resolve({ status: 0, body: "no completed cycle" }),
   ]);
 
   return NextResponse.json({
+    tokenScopes,
     tokenExpiry: user.whoopTokenExpiry,
     whoopId: user.whoopId,
-    queryRange: { start: start.toISOString(), end: now.toISOString() },
     completedCycleIdTested: completedCycleId,
-    endpoints: { workouts, recoveryList, recoveryByIdResult, sleepList, profile },
+    endpoints: { recoveryList, recoveryById, sleepList, cycleById },
   });
 }
