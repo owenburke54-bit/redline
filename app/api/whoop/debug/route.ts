@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 
 const WHOOP_API_BASE = "https://api.prod.whoop.com/developer/v1";
+const WHOOP_API_BASE_V2 = "https://api.prod.whoop.com/developer/v2";
 
 export async function GET() {
   const session = await auth();
@@ -21,8 +22,8 @@ export async function GET() {
   const now = new Date();
   const start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  async function hit(path: string, params?: Record<string, string>) {
-    const url = new URL(`${WHOOP_API_BASE}${path}`);
+  async function hit(path: string, params?: Record<string, string>, base = WHOOP_API_BASE) {
+    const url = new URL(`${base}${path}`);
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } });
     const body = res.ok ? await res.json() : await res.text();
@@ -41,24 +42,19 @@ export async function GET() {
     ? cyclesRes.body?.records?.find((r: { end: string | null; id: number }) => r.end != null)?.id
     : null;
 
-  const results = await Promise.all([
+  const [v1Recovery, v1Sleep, v2Recovery, v2Sleep, v2Workout] = await Promise.all([
     hit("/recovery", { limit: "5" }),
-    completedCycleId ? hit(`/recovery/${completedCycleId}`) : Promise.resolve({ status: 0, body: "skipped" }),
     hit("/sleep", { limit: "5" }),
-    completedCycleId ? hit(`/cycle/${completedCycleId}`) : Promise.resolve({ status: 0, body: "skipped" }),
-    // Nested endpoints — some WHOOP API versions use these
-    completedCycleId ? hit(`/cycle/${completedCycleId}/recovery`) : Promise.resolve({ status: 0, body: "skipped" }),
-    completedCycleId ? hit(`/cycle/${completedCycleId}/sleep`) : Promise.resolve({ status: 0, body: "skipped" }),
-    hit("/user/measurement/body"),
+    hit("/recovery", { limit: "5" }, WHOOP_API_BASE_V2),
+    hit("/activity/sleep", { limit: "5" }, WHOOP_API_BASE_V2),
+    hit("/activity/workout", { limit: "5" }, WHOOP_API_BASE_V2),
   ]);
-
-  const [recoveryList, recoveryById, sleepList, cycleById, nestedRecovery, nestedSleep, bodyMeasurement] = results;
 
   return NextResponse.json({
     tokenScopes,
     tokenExpiry: user.whoopTokenExpiry,
     whoopId: user.whoopId,
-    completedCycleIdTested: completedCycleId,
-    endpoints: { recoveryList, recoveryById, sleepList, cycleById, nestedRecovery, nestedSleep, bodyMeasurement },
+    v1: { recovery: v1Recovery, sleep: v1Sleep },
+    v2: { recovery: v2Recovery, sleep: v2Sleep, workout: v2Workout },
   });
 }
