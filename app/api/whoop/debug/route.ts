@@ -29,9 +29,10 @@ export async function GET() {
     return { status: res.status, body };
   }
 
-  const [workouts, recovery, cycles, profile] = await Promise.all([
+  const [workouts, recoveryWithDates, recoveryNoDates, cycles, profile] = await Promise.all([
     hit("/activity/workout", { start: start.toISOString(), end: now.toISOString(), limit: "5" }),
     hit("/recovery", { start: start.toISOString(), end: now.toISOString(), limit: "5" }),
+    hit("/recovery", { limit: "5" }),
     hit("/cycle", { start: start.toISOString(), end: now.toISOString(), limit: "5" }),
     hit("/user/profile/basic"),
   ]);
@@ -40,6 +41,6 @@ export async function GET() {
     tokenExpiry: user.whoopTokenExpiry,
     whoopId: user.whoopId,
     queryRange: { start: start.toISOString(), end: now.toISOString() },
-    endpoints: { workouts, recovery, cycles, profile },
+    endpoints: { workouts, recoveryWithDates, recoveryNoDates, cycles, profile },
   });
 }
