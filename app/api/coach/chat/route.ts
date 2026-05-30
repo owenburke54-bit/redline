@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [user, profile, events, weekWorkouts, whoopActivities, todayRecovery, stravaRuns] = await Promise.all([
+  const [user, profile, events, weekWorkouts, whoopActivities, todayRecovery, stravaRuns, whoopRunning] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.athleteProfile.findUnique({ where: { userId } }),
     db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" } }),
@@ -72,7 +72,13 @@ export async function POST(req: NextRequest) {
     }),
     db.stravaActivity.findMany({
       where: { userId, type: { in: ["Run", "VirtualRun", "TrailRun"] } },
-      select: { distance: true, movingTime: true, averageSpeed: true, startDate: true },
+      select: { distance: true, movingTime: true, averageSpeed: true, averageHeartrate: true, maxHeartrate: true, startDate: true },
+      orderBy: { startDate: "desc" },
+      take: 100,
+    }),
+    db.whoopActivity.findMany({
+      where: { userId, sportName: "Running" },
+      select: { startDate: true, avgHeartRate: true, maxHeartRate: true },
       orderBy: { startDate: "desc" },
       take: 100,
     }),
@@ -108,7 +114,7 @@ export async function POST(req: NextRequest) {
     ? "WHOOP connected — no recovery data synced yet (posts each morning after sleep)"
     : "WHOOP not connected";
 
-  const zones = computeTrainingZones(stravaRuns);
+  const zones = computeTrainingZones(stravaRuns, whoopRunning);
   const stravaZoneContext = stravaConnected
     ? buildStravaZoneContext(zones, todayRecovery?.recoveryScore ?? null)
     : undefined;

@@ -37,6 +37,12 @@ export function sportName(sportId: number): string {
   return SPORT_NAMES[sportId] ?? `Sport ${sportId}`;
 }
 
+// Deduplicate concurrent token refreshes — prevents double-refresh when
+// fetchWorkouts and fetchRecoveries race in Promise.all with an expired token.
+// WHOOP rotates the refresh token on first use, so the second refresh would
+// hit a 401 and the first request would use a now-superseded access token.
+const refreshInFlight = new Map<string, Promise<string>>();
+
 async function refreshToken(userId: string, refreshToken: string): Promise<string> {
   const res = await fetch(WHOOP_TOKEN_URL, {
     method: "POST",
@@ -77,9 +83,16 @@ async function getValidToken(userId: string): Promise<string> {
   }
 
   const isExpired = !user.whoopTokenExpiry || user.whoopTokenExpiry <= new Date(Date.now() + 60_000);
-  if (isExpired) return refreshToken(userId, user.whoopRefreshToken);
+  if (!isExpired) return user.whoopAccessToken;
 
-  return user.whoopAccessToken;
+  const inFlight = refreshInFlight.get(userId);
+  if (inFlight) return inFlight;
+
+  const promise = refreshToken(userId, user.whoopRefreshToken).finally(() => {
+    refreshInFlight.delete(userId);
+  });
+  refreshInFlight.set(userId, promise);
+  return promise;
 }
 
 async function whoopFetch<T>(userId: string, path: string, params?: Record<string, string>, allow404 = false): Promise<T | null> {

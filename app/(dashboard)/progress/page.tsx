@@ -34,7 +34,7 @@ export default async function ProgressPage() {
   const whoopConnected = !!(user?.whoopAccessToken && user?.whoopId);
   const stravaConnected = !!(user?.stravaAccessToken && user?.stravaId);
 
-  const [classScheduleProfile, [lastActivity, todayRecovery], stravaStats] = await Promise.all([
+  const [classScheduleProfile, [lastActivity, todayRecovery], stravaStats, stravaRecentRuns] = await Promise.all([
     db.athleteProfile.findUnique({ where: { userId }, select: { classSchedule: true } }),
     whoopConnected
     ? Promise.all([
@@ -57,6 +57,14 @@ export default async function ProgressPage() {
           _max: { startDate: true },
         })
       : null,
+    stravaConnected
+      ? db.stravaActivity.findMany({
+          where: { userId, type: { in: ["Run", "VirtualRun", "TrailRun"] } },
+          orderBy: { startDate: "desc" },
+          take: 10,
+          select: { name: true, startDate: true, distance: true, movingTime: true, averageHeartrate: true, averageSpeed: true },
+        })
+      : [],
   ]);
 
   const [workouts, plans] = await Promise.all([
@@ -367,6 +375,51 @@ export default async function ProgressPage() {
               </p>
             )}
           </div>
+
+          {/* Recent runs table */}
+          {stravaRecentRuns.length > 0 && (
+            <div className="rounded border border-border bg-card overflow-hidden">
+              <div className="px-4 py-3 border-b border-border/60">
+                <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wide">Recent Runs</p>
+              </div>
+              <div className="divide-y divide-border/40">
+                {stravaRecentRuns.map((run, i) => {
+                  const distMi = run.distance / 1609.34;
+                  const pace = run.averageSpeed && run.averageSpeed > 0
+                    ? (() => {
+                        const spm = 1609.34 / run.averageSpeed;
+                        return `${Math.floor(spm / 60)}:${Math.round(spm % 60).toString().padStart(2, "0")}/mi`;
+                      })()
+                    : null;
+                  return (
+                    <div key={i} className="flex items-center justify-between px-4 py-3 gap-4">
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-medium truncate">{run.name}</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                          {run.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-5 shrink-0 text-right">
+                        <div>
+                          <p className="text-[11px] font-bold tabular-nums">{distMi.toFixed(1)} mi</p>
+                        </div>
+                        {pace && (
+                          <div>
+                            <p className="text-[11px] font-bold tabular-nums text-[var(--marathon-color)]">{pace}</p>
+                          </div>
+                        )}
+                        {run.averageHeartrate && (
+                          <div>
+                            <p className="text-[11px] tabular-nums text-muted-foreground/60">{Math.round(run.averageHeartrate)} bpm</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
