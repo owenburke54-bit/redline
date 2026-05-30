@@ -1,13 +1,14 @@
 import { db } from "@/lib/db";
-import { fetchWorkouts, fetchRecoveries, fetchWorkoutById, fetchRecoveryById, sportName } from "./client";
+import { fetchWorkouts, fetchRecoveries, fetchCycles, fetchWorkoutById, fetchRecoveryById, sportName } from "./client";
 
 export async function syncWhoopData(userId: string, daysBack = 30): Promise<{ activities: number; recoveries: number }> {
   const end = new Date();
   const start = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
 
-  const [workouts, recoveries] = await Promise.all([
+  const [workouts, recoveries, cycles] = await Promise.all([
     fetchWorkouts(userId, start, end),
     fetchRecoveries(userId, start, end),
+    fetchCycles(userId, start, end),
   ]);
 
   let activitiesUpserted = 0;
@@ -66,6 +67,32 @@ export async function syncWhoopData(userId: string, daysBack = 30): Promise<{ ac
       },
     });
     recoveriesUpserted++;
+  }
+
+  // Sync daily cycles (primary WHOOP strain source for users without explicit workout tracking)
+  for (const c of cycles) {
+    if (!c.score || c.score_state !== "SCORED") continue;
+    await db.whoopActivity.upsert({
+      where: { whoopId: `cycle_${c.id}` },
+      create: {
+        userId,
+        whoopId: `cycle_${c.id}`,
+        sportName: "Cycle",
+        startDate: new Date(c.start),
+        endDate: c.end ? new Date(c.end) : new Date(),
+        strain: c.score.strain,
+        avgHeartRate: c.score.average_heart_rate,
+        maxHeartRate: c.score.max_heart_rate,
+        calories: c.score.kilojoule / 4.184,
+      },
+      update: {
+        strain: c.score.strain,
+        avgHeartRate: c.score.average_heart_rate,
+        maxHeartRate: c.score.max_heart_rate,
+        endDate: c.end ? new Date(c.end) : new Date(),
+      },
+    });
+    activitiesUpserted++;
   }
 
   return { activities: activitiesUpserted, recoveries: recoveriesUpserted };

@@ -48,9 +48,8 @@ export default async function DashboardPage() {
   const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
   const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-  const [user, events, todayWorkouts, todayRecovery, recentActivities, todayAllActivities] = await Promise.all([
+  const [user, events, todayWorkouts, todayRecovery, recentActivities, todayCycle] = await Promise.all([
     db.user.findUnique({ where: { id: userId }, select: { id: true, name: true, dedicationScore: true, whoopAccessToken: true, whoopId: true } }),
     db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" }, include: { plan: { select: { id: true } } } }),
     db.workout.findMany({
@@ -63,13 +62,15 @@ export default async function DashboardPage() {
       select: { recoveryScore: true, hrvRmssd: true, restingHr: true, sleepScore: true, sleepDuration: true, date: true },
     }),
     db.whoopActivity.findMany({
-      where: { userId, startDate: { gte: sevenDaysAgo }, sportName: { notIn: ["Running", "Cycling"] } },
+      where: { userId, startDate: { gte: sevenDaysAgo }, sportName: { notIn: ["Running", "Cycling", "Cycle"] } },
       orderBy: { startDate: "desc" },
       select: { sportName: true, startDate: true, strain: true },
       take: 5,
     }),
-    db.whoopActivity.findMany({
-      where: { userId, startDate: { gte: twentyFourHoursAgo } },
+    // Most recent WHOOP cycle = today's cumulative strain (the number shown in the WHOOP app ring)
+    db.whoopActivity.findFirst({
+      where: { userId, sportName: "Cycle" },
+      orderBy: { startDate: "desc" },
       select: { strain: true },
     }),
   ]);
@@ -78,9 +79,7 @@ export default async function DashboardPage() {
 
   const whoopConnected = !!(user?.whoopAccessToken && user?.whoopId);
 
-  const todayStrain = todayAllActivities.length > 0
-    ? todayAllActivities.reduce((sum, a) => sum + a.strain, 0)
-    : null;
+  const todayStrain = todayCycle?.strain ?? null;
 
   const recentHighStrain = recentActivities.find(
     a => a.strain >= 10 && a.startDate >= fortyEightHoursAgo

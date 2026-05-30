@@ -139,6 +139,20 @@ async function whoopFetch<T>(userId: string, path: string, params?: Record<strin
   return res.json() as Promise<T>;
 }
 
+export interface WhoopCycle {
+  id: number;
+  start: string;
+  end: string | null;
+  timezone_offset: string;
+  score_state: string;
+  score?: {
+    strain: number;
+    kilojoule: number;
+    average_heart_rate: number;
+    max_heart_rate: number;
+  };
+}
+
 export interface WhoopWorkout {
   id: number;
   sport_id: number;
@@ -220,6 +234,27 @@ export async function fetchWorkoutById(userId: string, workoutId: number): Promi
 
 export async function fetchRecoveryById(userId: string, cycleId: number): Promise<WhoopRecoveryRecord> {
   return (await whoopFetch<WhoopRecoveryRecord>(userId, `/recovery/${cycleId}`))!;
+}
+
+export async function fetchCycles(userId: string, start: Date, end: Date): Promise<WhoopCycle[]> {
+  const all: WhoopCycle[] = [];
+  let nextToken: string | undefined;
+
+  do {
+    const params: Record<string, string> = {
+      start: start.toISOString(),
+      end: end.toISOString(),
+      limit: "25",
+    };
+    if (nextToken) params.nextToken = nextToken;
+
+    const page = await whoopFetch<PaginatedResponse<WhoopCycle>>(userId, "/cycle", params, true);
+    if (!page) return all;
+    all.push(...page.records);
+    nextToken = page.next_token;
+  } while (nextToken);
+
+  return all;
 }
 
 export async function fetchProfile(userId: string): Promise<{ user_id: number }> {

@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       orderBy: { scheduledDate: "asc" },
     }),
     db.whoopActivity.findMany({
-      where: { userId, startDate: { gte: whoopStart } },
+      where: { userId, startDate: { gte: whoopStart }, sportName: { not: "Cycle" } },
       orderBy: { startDate: "desc" },
       select: { sportName: true, startDate: true, strain: true },
     }),
