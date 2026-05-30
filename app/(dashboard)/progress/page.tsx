@@ -59,7 +59,7 @@ export default async function ProgressPage() {
       : null,
     stravaConnected
       ? db.stravaActivity.findMany({
-          where: { userId, type: { in: ["Run", "VirtualRun", "TrailRun"] } },
+          where: { userId, type: { in: ["Run", "VirtualRun", "TrailRun"] }, distance: { gte: 2400 } },
           orderBy: { startDate: "desc" },
           take: 10,
           select: { name: true, startDate: true, distance: true, movingTime: true, averageHeartrate: true, averageSpeed: true },

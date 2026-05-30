@@ -16,7 +16,11 @@ export function WhoopSyncButton() {
       toast.success(`Synced ${data.recoveries ?? 0} recovery records, ${data.activities ?? 0} activities.`);
       window.location.reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "WHOOP sync failed.");
+      const msg = err instanceof Error ? err.message : "WHOOP sync failed.";
+      toast.error(msg);
+      if (msg.includes("session expired")) {
+        setTimeout(() => window.location.reload(), 2500);
+      }
     } finally {
       setSyncing(false);
     }

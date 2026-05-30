@@ -56,9 +56,12 @@ export function computeTrainingZones(
     maxHeartRate: number | null;
   }[]
 ): TrainingZones {
-  const qualityRuns = stravaRuns.filter(
-    (r) => r.distance >= 3000 && r.averageSpeed && r.averageSpeed > 0
-  );
+  // 2400m min (filters sub-1.5mi treadmill warmups), pace 4:00–15:00/mi sanity bounds
+  const qualityRuns = stravaRuns.filter((r) => {
+    if (r.distance < 2400 || !r.averageSpeed || r.averageSpeed <= 0) return false;
+    const secsPerMile = 1609.34 / r.averageSpeed;
+    return secsPerMile >= 240 && secsPerMile <= 900;
+  });
 
   const emptyZones: TrainingZones = {
     easyPace: null, longRunPace: null, tempoPace: null, intervalPace: null,

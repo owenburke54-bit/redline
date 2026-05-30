@@ -43,19 +43,29 @@ export function sportName(sportId: number): string {
 // hit a 401 and the first request would use a now-superseded access token.
 const refreshInFlight = new Map<string, Promise<string>>();
 
-async function refreshToken(userId: string, refreshToken: string): Promise<string> {
+async function refreshToken(userId: string, currentRefreshToken: string): Promise<string> {
   const res = await fetch(WHOOP_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "refresh_token",
-      refresh_token: refreshToken,
+      refresh_token: currentRefreshToken,
       client_id: process.env.WHOOP_CLIENT_ID!,
       client_secret: process.env.WHOOP_CLIENT_SECRET!,
     }),
   });
 
-  if (!res.ok) throw new Error(`WHOOP token refresh failed: ${res.status}`);
+  if (!res.ok) {
+    // Refresh token is dead — clear tokens so UI shows "reconnect" instead of broken sync
+    if (res.status === 401 || res.status === 400) {
+      await db.user.update({
+        where: { id: userId },
+        data: { whoopAccessToken: null, whoopRefreshToken: null, whoopTokenExpiry: null },
+      });
+      throw new Error("WHOOP session expired. Reload the page and reconnect WHOOP.");
+    }
+    throw new Error(`WHOOP token refresh failed: ${res.status}`);
+  }
 
   const data = await res.json();
   const expiry = new Date(Date.now() + data.expires_in * 1000);
@@ -64,7 +74,7 @@ async function refreshToken(userId: string, refreshToken: string): Promise<strin
     where: { id: userId },
     data: {
       whoopAccessToken: data.access_token,
-      whoopRefreshToken: data.refresh_token ?? refreshToken,
+      whoopRefreshToken: data.refresh_token ?? currentRefreshToken,
       whoopTokenExpiry: expiry,
     },
   });
@@ -96,13 +106,33 @@ async function getValidToken(userId: string): Promise<string> {
 }
 
 async function whoopFetch<T>(userId: string, path: string, params?: Record<string, string>, allow404 = false): Promise<T | null> {
-  const token = await getValidToken(userId);
+  let token = await getValidToken(userId);
   const url = new URL(`${WHOOP_API_BASE}${path}`);
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
-  const res = await fetch(url.toString(), {
+  let res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${token}` },
   });
+
+  // Token valid per DB expiry but WHOOP rejected it — force refresh once.
+  // Uses the same dedup map so concurrent callers (fetchWorkouts + fetchRecoveries in Promise.all)
+  // share a single refresh and don't double-rotate the refresh token.
+  if (res.status === 401) {
+    let forceRefresh = refreshInFlight.get(userId);
+    if (!forceRefresh) {
+      const user = await db.user.findUnique({ where: { id: userId }, select: { whoopRefreshToken: true } });
+      if (user?.whoopRefreshToken) {
+        forceRefresh = refreshToken(userId, user.whoopRefreshToken).finally(() => {
+          refreshInFlight.delete(userId);
+        });
+        refreshInFlight.set(userId, forceRefresh);
+      }
+    }
+    if (forceRefresh) {
+      token = await forceRefresh;
+      res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } });
+    }
+  }
 
   if (res.status === 404 && allow404) return null;
   if (!res.ok) throw new Error(`WHOOP API error ${res.status} on ${path}`);
