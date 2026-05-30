@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 
 const WHOOP_API_BASE = "https://api.prod.whoop.com/developer/v1";
+const WHOOP_API_BASE_V2 = "https://api.prod.whoop.com/developer/v2";
 const WHOOP_TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token";
 
 // WHOOP sport_id → human-readable name mapping (subset of common ones)
@@ -105,9 +106,15 @@ async function getValidToken(userId: string): Promise<string> {
   return promise;
 }
 
-async function whoopFetch<T>(userId: string, path: string, params?: Record<string, string>, allow404 = false): Promise<T | null> {
+async function whoopFetch<T>(
+  userId: string,
+  path: string,
+  params?: Record<string, string>,
+  allow404 = false,
+  baseUrl = WHOOP_API_BASE,
+): Promise<T | null> {
   let token = await getValidToken(userId);
-  const url = new URL(`${WHOOP_API_BASE}${path}`);
+  const url = new URL(`${baseUrl}${path}`);
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
   let res = await fetch(url.toString(), {
@@ -166,18 +173,39 @@ export interface WhoopWorkout {
   };
 }
 
+// v2 API format — recovery is a direct endpoint, not nested under cycle
 export interface WhoopRecoveryRecord {
+  id: string;
   cycle_id: number;
+  sleep_id: number | null;
+  user_id: number;
   created_at: string;
+  updated_at: string;
+  score_state: string;
   score?: {
     recovery_score: number;
-    hrv_rmssd_milli?: number;
-    resting_heart_rate?: number;
+    resting_heart_rate: number;
+    hrv_rmssd_milli: number;
     spo2_percentage?: number;
+    skin_temp_celsius?: number;
   };
-  sleep?: {
-    score?: number;
-    total_in_bed_time_milli?: number;
+}
+
+// v2 sleep record
+export interface WhoopSleepRecord {
+  id: string;
+  cycle_id: number;
+  user_id: number;
+  created_at: string;
+  start: string;
+  end: string;
+  score_state: string;
+  nap: boolean;
+  score?: {
+    sleep_performance_percentage?: number;
+    stage_summary?: {
+      total_in_bed_duration_milli?: number;
+    };
   };
 }
 
@@ -207,6 +235,7 @@ export async function fetchWorkouts(userId: string, start: Date, end: Date): Pro
   return all;
 }
 
+// Uses v2 API — /recovery only exists as a direct endpoint in v2, not v1
 export async function fetchRecoveries(userId: string, start: Date, end: Date): Promise<WhoopRecoveryRecord[]> {
   const all: WhoopRecoveryRecord[] = [];
   let nextToken: string | undefined;
@@ -219,9 +248,36 @@ export async function fetchRecoveries(userId: string, start: Date, end: Date): P
     };
     if (nextToken) params.nextToken = nextToken;
 
-    const page = await whoopFetch<PaginatedResponse<WhoopRecoveryRecord>>(userId, "/recovery", params, true);
-    if (!page) return all; // 404 = no recovery data yet
+    const page = await whoopFetch<PaginatedResponse<WhoopRecoveryRecord>>(
+      userId, "/recovery", params, true, WHOOP_API_BASE_V2
+    );
+    if (!page) return all;
     all.push(...page.records);
+    nextToken = page.next_token;
+  } while (nextToken);
+
+  return all;
+}
+
+// Uses v2 API — fetches sleep sessions to get sleep score and duration
+export async function fetchSleepSessions(userId: string, start: Date, end: Date): Promise<WhoopSleepRecord[]> {
+  const all: WhoopSleepRecord[] = [];
+  let nextToken: string | undefined;
+
+  do {
+    const params: Record<string, string> = {
+      start: start.toISOString(),
+      end: end.toISOString(),
+      limit: "25",
+    };
+    if (nextToken) params.nextToken = nextToken;
+
+    const page = await whoopFetch<PaginatedResponse<WhoopSleepRecord>>(
+      userId, "/activity/sleep", params, true, WHOOP_API_BASE_V2
+    );
+    if (!page) return all;
+    // Exclude naps — only full sleep sessions generate recovery scores
+    all.push(...page.records.filter(s => !s.nap));
     nextToken = page.next_token;
   } while (nextToken);
 
@@ -233,7 +289,7 @@ export async function fetchWorkoutById(userId: string, workoutId: number): Promi
 }
 
 export async function fetchRecoveryById(userId: string, cycleId: number): Promise<WhoopRecoveryRecord> {
-  return (await whoopFetch<WhoopRecoveryRecord>(userId, `/recovery/${cycleId}`))!;
+  return (await whoopFetch<WhoopRecoveryRecord>(userId, `/recovery/${cycleId}`, undefined, false, WHOOP_API_BASE_V2))!;
 }
 
 export async function fetchCycles(userId: string, start: Date, end: Date): Promise<WhoopCycle[]> {

@@ -1,15 +1,21 @@
 import { db } from "@/lib/db";
-import { fetchWorkouts, fetchRecoveries, fetchCycles, fetchWorkoutById, fetchRecoveryById, sportName } from "./client";
+import { fetchWorkouts, fetchRecoveries, fetchSleepSessions, fetchCycles, fetchWorkoutById, fetchRecoveryById, sportName } from "./client";
 
 export async function syncWhoopData(userId: string, daysBack = 30): Promise<{ activities: number; recoveries: number }> {
   const end = new Date();
   const start = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
 
-  const [workouts, recoveries, cycles] = await Promise.all([
+  const [workouts, recoveries, sleepSessions, cycles] = await Promise.all([
     fetchWorkouts(userId, start, end),
     fetchRecoveries(userId, start, end),
+    fetchSleepSessions(userId, start, end),
     fetchCycles(userId, start, end),
   ]);
+
+  // Index sleep sessions by cycle_id for O(1) lookup when combining with recovery
+  const sleepByCycleId = new Map(
+    sleepSessions.map(s => [s.cycle_id, s])
+  );
 
   let activitiesUpserted = 0;
   let recoveriesUpserted = 0;
@@ -39,9 +45,16 @@ export async function syncWhoopData(userId: string, daysBack = 30): Promise<{ ac
   }
 
   for (const r of recoveries) {
-    if (!r.score) continue;
+    if (!r.score || r.score_state !== "SCORED") continue;
     const date = new Date(r.created_at);
     date.setHours(0, 0, 0, 0);
+
+    // Pull sleep score + duration from matching sleep session (v2: separate endpoint, linked by cycle_id)
+    const sleep = sleepByCycleId.get(r.cycle_id);
+    const sleepScore = sleep?.score?.sleep_performance_percentage ?? null;
+    const sleepDuration = sleep?.score?.stage_summary?.total_in_bed_duration_milli
+      ? Math.round(sleep.score.stage_summary.total_in_bed_duration_milli / 60000)
+      : null;
 
     await db.whoopRecovery.upsert({
       where: { userId_date: { userId, date } },
@@ -51,19 +64,15 @@ export async function syncWhoopData(userId: string, daysBack = 30): Promise<{ ac
         recoveryScore: r.score.recovery_score,
         hrvRmssd: r.score.hrv_rmssd_milli ?? null,
         restingHr: r.score.resting_heart_rate ?? null,
-        sleepScore: r.sleep?.score ?? null,
-        sleepDuration: r.sleep?.total_in_bed_time_milli
-          ? Math.round(r.sleep.total_in_bed_time_milli / 60000)
-          : null,
+        sleepScore,
+        sleepDuration,
       },
       update: {
         recoveryScore: r.score.recovery_score,
         hrvRmssd: r.score.hrv_rmssd_milli ?? null,
         restingHr: r.score.resting_heart_rate ?? null,
-        sleepScore: r.sleep?.score ?? null,
-        sleepDuration: r.sleep?.total_in_bed_time_milli
-          ? Math.round(r.sleep.total_in_bed_time_milli / 60000)
-          : null,
+        sleepScore,
+        sleepDuration,
       },
     });
     recoveriesUpserted++;
