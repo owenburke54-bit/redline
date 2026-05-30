@@ -184,9 +184,10 @@ export async function fetchWorkouts(userId: string, start: Date, end: Date): Pro
     };
     if (nextToken) params.nextToken = nextToken;
 
-    const page = await whoopFetch<PaginatedResponse<WhoopWorkout>>(userId, "/activity/workout", params);
-    all.push(...page!.records);
-    nextToken = page!.next_token;
+    const page = await whoopFetch<PaginatedResponse<WhoopWorkout>>(userId, "/activity/workout", params, true);
+    if (!page) return all; // 404 = no workout data yet
+    all.push(...page.records);
+    nextToken = page.next_token;
   } while (nextToken);
 
   return all;
