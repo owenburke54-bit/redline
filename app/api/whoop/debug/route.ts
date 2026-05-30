@@ -41,18 +41,24 @@ export async function GET() {
     ? cyclesRes.body?.records?.find((r: { end: string | null; id: number }) => r.end != null)?.id
     : null;
 
-  const [recoveryList, recoveryById, sleepList, cycleById] = await Promise.all([
+  const results = await Promise.all([
     hit("/recovery", { limit: "5" }),
-    completedCycleId ? hit(`/recovery/${completedCycleId}`) : Promise.resolve({ status: 0, body: "no completed cycle" }),
+    completedCycleId ? hit(`/recovery/${completedCycleId}`) : Promise.resolve({ status: 0, body: "skipped" }),
     hit("/sleep", { limit: "5" }),
-    completedCycleId ? hit(`/cycle/${completedCycleId}`) : Promise.resolve({ status: 0, body: "no completed cycle" }),
+    completedCycleId ? hit(`/cycle/${completedCycleId}`) : Promise.resolve({ status: 0, body: "skipped" }),
+    // Nested endpoints — some WHOOP API versions use these
+    completedCycleId ? hit(`/cycle/${completedCycleId}/recovery`) : Promise.resolve({ status: 0, body: "skipped" }),
+    completedCycleId ? hit(`/cycle/${completedCycleId}/sleep`) : Promise.resolve({ status: 0, body: "skipped" }),
+    hit("/user/measurement/body"),
   ]);
+
+  const [recoveryList, recoveryById, sleepList, cycleById, nestedRecovery, nestedSleep, bodyMeasurement] = results;
 
   return NextResponse.json({
     tokenScopes,
     tokenExpiry: user.whoopTokenExpiry,
     whoopId: user.whoopId,
     completedCycleIdTested: completedCycleId,
-    endpoints: { recoveryList, recoveryById, sleepList, cycleById },
+    endpoints: { recoveryList, recoveryById, sleepList, cycleById, nestedRecovery, nestedSleep, bodyMeasurement },
   });
 }
