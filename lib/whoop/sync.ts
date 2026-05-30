@@ -134,7 +134,7 @@ export async function syncWorkoutById(userId: string, workoutId: number): Promis
 
 export async function syncRecoveryById(userId: string, cycleId: number): Promise<void> {
   const r = await fetchRecoveryById(userId, cycleId);
-  if (!r.score) return;
+  if (!r.score || r.score_state !== "SCORED") return;
 
   const date = new Date(r.created_at);
   date.setHours(0, 0, 0, 0);
@@ -147,19 +147,13 @@ export async function syncRecoveryById(userId: string, cycleId: number): Promise
       recoveryScore: r.score.recovery_score,
       hrvRmssd: r.score.hrv_rmssd_milli ?? null,
       restingHr: r.score.resting_heart_rate ?? null,
-      sleepScore: r.sleep?.score ?? null,
-      sleepDuration: r.sleep?.total_in_bed_time_milli
-        ? Math.round(r.sleep.total_in_bed_time_milli / 60000)
-        : null,
+      sleepScore: null,
+      sleepDuration: null,
     },
     update: {
       recoveryScore: r.score.recovery_score,
       hrvRmssd: r.score.hrv_rmssd_milli ?? null,
       restingHr: r.score.resting_heart_rate ?? null,
-      sleepScore: r.sleep?.score ?? null,
-      sleepDuration: r.sleep?.total_in_bed_time_milli
-        ? Math.round(r.sleep.total_in_bed_time_milli / 60000)
-        : null,
     },
   });
 }
