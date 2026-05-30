@@ -29,11 +29,17 @@ export async function GET() {
     return { status: res.status, body };
   }
 
-  const [workouts, recoveryWithDates, recoveryNoDates, cycles, profile] = await Promise.all([
+  // Get most recent completed cycle ID to test recovery-by-cycle-id
+  const cyclesRes = await hit("/cycle", { start: start.toISOString(), end: now.toISOString(), limit: "5" });
+  const completedCycleId = cyclesRes.status === 200
+    ? cyclesRes.body?.records?.find((r: { end: string | null; id: number }) => r.end != null)?.id
+    : null;
+
+  const [workouts, recoveryList, recoveryByIdResult, sleepList, profile] = await Promise.all([
     hit("/activity/workout", { start: start.toISOString(), end: now.toISOString(), limit: "5" }),
-    hit("/recovery", { start: start.toISOString(), end: now.toISOString(), limit: "5" }),
     hit("/recovery", { limit: "5" }),
-    hit("/cycle", { start: start.toISOString(), end: now.toISOString(), limit: "5" }),
+    completedCycleId ? hit(`/recovery/${completedCycleId}`) : Promise.resolve({ status: 0, body: "no completed cycle" }),
+    hit("/sleep", { start: start.toISOString(), end: now.toISOString(), limit: "5" }),
     hit("/user/profile/basic"),
   ]);
 
@@ -41,6 +47,7 @@ export async function GET() {
     tokenExpiry: user.whoopTokenExpiry,
     whoopId: user.whoopId,
     queryRange: { start: start.toISOString(), end: now.toISOString() },
-    endpoints: { workouts, recoveryWithDates, recoveryNoDates, cycles, profile },
+    completedCycleIdTested: completedCycleId,
+    endpoints: { workouts, recoveryList, recoveryByIdResult, sleepList, profile },
   });
 }
