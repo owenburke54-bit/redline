@@ -5,6 +5,7 @@ import { getMonday } from "@/lib/utils";
 import { WeekRow, type WeekRowData, type WorkoutRowData } from "@/components/plan/WeekRow";
 import { ResolveConflictsButton } from "@/components/plan/ResolveConflictsButton";
 import { PlanStatusToggle } from "@/components/plan/PlanStatusToggle";
+import { RestoreTemplateButton } from "@/components/plan/RestoreTemplateButton";
 import { Trophy, Target, CalendarDays } from "lucide-react";
 import Link from "next/link";
 
@@ -162,7 +163,10 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
         <Link href="/events" className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors">
           ← Events
         </Link>
-        <ResolveConflictsButton />
+        <div className="flex items-center gap-2">
+          <RestoreTemplateButton planId={plan.id} />
+          <ResolveConflictsButton />
+        </div>
       </div>
 
       {/* Pause/resume toggle — shows banner when paused, ghost button when active */}
