@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageSquarePlus } from "lucide-react";
+import { MessageSquarePlus, AlertCircle } from "lucide-react";
 
 export function WeeklyCheckinCard({
   completedCount,
@@ -17,20 +17,33 @@ export function WeeklyCheckinCard({
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit() {
     if (effort == null || bodyFeel == null) return;
     setLoading(true);
+    setError(null);
 
-    const res = await fetch("/api/checkin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ perceivedEffort: effort, bodyFeel, notes }),
-    });
+    try {
+      const res = await fetch("/api/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ perceivedEffort: effort, bodyFeel, notes }),
+      });
 
-    const data = await res.json();
-    setLoading(false);
-    if (res.ok) setAiResponse(data.aiResponse);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong. Try again.");
+        return;
+      }
+
+      setAiResponse(data.aiResponse ?? "Check-in saved.");
+    } catch {
+      setError("Connection error. Check your network and try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (aiResponse) {
@@ -92,9 +105,16 @@ export function WeeklyCheckinCard({
             value={notes}
             onChange={e => setNotes(e.target.value)}
             className="h-20 text-xs resize-none"
-            maxLength={400}
+            maxLength={500}
           />
         </div>
+
+        {error && (
+          <div className="flex items-center gap-2 rounded border border-red-500/30 bg-red-500/5 px-3 py-2">
+            <AlertCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+            <p className="text-xs text-red-400">{error}</p>
+          </div>
+        )}
 
         <Button
           className="w-full text-background"

@@ -139,6 +139,7 @@ export function WorkoutDetailModal({
   const [effort, setEffort] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const date = new Date(workout.scheduledDate);
   const dateStr = date.toLocaleDateString("en-US", {
@@ -150,28 +151,38 @@ export function WorkoutDetailModal({
 
   async function logWorkout(status: "COMPLETED" | "SKIPPED") {
     setSaving(true);
+    setSaveError(null);
     const body: Record<string, unknown> = { status };
     if (status === "COMPLETED") {
       const dist = parseFloat(actualDist);
-      if (!isNaN(dist) && dist > 0) body.actualDistance = dist;
+      if (!isNaN(dist) && dist > 0 && dist < 200) body.actualDistance = dist;
       if (effort != null) body.perceivedEffort = effort;
     }
 
-    const res = await fetch(`/api/workouts/${workout.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    try {
+      const res = await fetch(`/api/workouts/${workout.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    setSaving(false);
-    if (res.ok) {
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSaveError(data.error ?? "Failed to save. Try again.");
+        return;
+      }
+
       setSaved(true);
       onWorkoutUpdated?.(workout.id, {
         status,
-        actualDistance: body.actualDistance as number | undefined ?? null,
-        perceivedEffort: body.perceivedEffort as number | undefined ?? null,
+        actualDistance: typeof body.actualDistance === "number" ? body.actualDistance : null,
+        perceivedEffort: typeof body.perceivedEffort === "number" ? body.perceivedEffort : null,
       });
       setTimeout(onClose, 800);
+    } catch {
+      setSaveError("Connection error. Try again.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -320,6 +331,13 @@ export function WorkoutDetailModal({
                   <p className="text-[10px] text-muted-foreground">{EFFORT_LABELS[effort]}</p>
                 )}
               </div>
+
+              {saveError && (
+                <div className="flex items-start gap-2 rounded border border-red-500/30 bg-red-500/5 px-3 py-2">
+                  <AlertTriangle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-400">{saveError}</p>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-2">
                 <Button

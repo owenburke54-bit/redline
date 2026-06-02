@@ -87,7 +87,7 @@ export async function syncStravaActivities(userId: string, daysBack = 90): Promi
   for (const a of activities) {
     const stravaId = String(a.id);
 
-    await db.stravaActivity.upsert({
+    const record = await db.stravaActivity.upsert({
       where: { stravaId },
       create: {
         userId,
@@ -110,14 +110,11 @@ export async function syncStravaActivities(userId: string, daysBack = 90): Promi
         averageSpeed: a.average_speed ?? null,
         effortScore: a.suffer_score ?? null,
       },
-    });
-
-    // Auto-match new activities to scheduled workouts
-    const existing = await db.stravaActivity.findUnique({
-      where: { stravaId },
       select: { matchedWorkoutId: true },
     });
-    if (!existing?.matchedWorkoutId) {
+
+    // Auto-match only if not already linked to a workout
+    if (!record.matchedWorkoutId) {
       await matchActivityToWorkout(
         userId,
         stravaId,
