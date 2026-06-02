@@ -6,6 +6,7 @@ import { buildCoachSystemPrompt } from "@/lib/ai/coachPrompts";
 import { CLAUDE_MODEL } from "@/lib/ai/config";
 import { checkRateLimit } from "@/lib/ai/rateLimit";
 import { formatWhoopContextForCoach } from "@/lib/whoop/sync";
+import { formatGarminContextForCoach } from "@/lib/garmin/sync";
 import { weeksUntil } from "@/lib/utils";
 import { classScheduleSchema } from "@/lib/validation/schemas";
 import { computeTrainingZones, buildStravaZoneContext } from "@/lib/strava/zones";
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [user, profile, events, weekWorkouts, whoopActivities, todayRecovery, stravaRuns, whoopRunning] = await Promise.all([
+  const [user, profile, events, weekWorkouts, whoopActivities, todayRecovery, stravaRuns, whoopRunning, todayGarmin] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.athleteProfile.findUnique({ where: { userId } }),
     db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" } }),
@@ -82,6 +83,11 @@ export async function POST(req: NextRequest) {
       orderBy: { startDate: "desc" },
       take: 100,
     }),
+    db.garminDailySummary.findFirst({
+      where: { userId },
+      orderBy: { date: "desc" },
+      select: { bodyBattery: true, stressAvg: true, restingHr: true, sleepScore: true, sleepDuration: true, sleepHrv: true },
+    }),
   ]);
 
   const profileParts = [
@@ -106,13 +112,26 @@ export async function POST(req: NextRequest) {
     : "No workouts scheduled this week";
 
   const whoopConnected = !!(user?.whoopAccessToken && user?.whoopId);
+  const garminConnected = !!(user?.garminAccessToken && user?.garminUserId);
   const stravaConnected = !!(user?.stravaAccessToken && user?.stravaId);
+
   const rawWhoopContext = formatWhoopContextForCoach(whoopActivities, todayRecovery);
   const whoopContext = rawWhoopContext !== "No WHOOP data available"
     ? rawWhoopContext
     : whoopConnected
     ? "WHOOP connected — no recovery data synced yet (posts each morning after sleep)"
     : "WHOOP not connected";
+
+  const rawGarminContext = formatGarminContextForCoach(todayGarmin ?? null);
+  const garminContext = garminConnected
+    ? rawGarminContext
+    : null;
+
+  // Combine wearable context: prefer whichever has data
+  const wearableContext = [
+    whoopConnected ? whoopContext : null,
+    garminContext,
+  ].filter(Boolean).join("\n---\n") || "No wearable connected";
 
   const zones = computeTrainingZones(stravaRuns, whoopRunning);
   const stravaZoneContext = stravaConnected
@@ -130,7 +149,7 @@ export async function POST(req: NextRequest) {
         ? `${zones.runCount} runs in Strava (avg ${zones.avgWeeklyMiles} mi/wk over last 4 weeks)`
         : "Strava connected — no runs synced yet."
       : "Strava not connected.",
-    whoopContext,
+    whoopContext: wearableContext,
     stravaZoneContext,
     activeConflicts: [],
     classSchedule: (() => {

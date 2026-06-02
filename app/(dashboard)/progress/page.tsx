@@ -4,6 +4,7 @@ import { getMonday } from "@/lib/utils";
 import { TrainingLoadChart } from "@/components/progress/TrainingLoadChart";
 import { ConsistencyChart } from "@/components/progress/ConsistencyChart";
 import { WhoopConnectCard } from "@/components/whoop/WhoopConnectCard";
+import { GarminConnectCard } from "@/components/garmin/GarminConnectCard";
 import { ClassScheduleCard } from "@/components/profile/ClassScheduleCard";
 import { classScheduleSchema, type ClassSchedule } from "@/lib/validation/schemas";
 import { ChartErrorBoundary } from "@/components/ui/ChartErrorBoundary";
@@ -29,12 +30,13 @@ export default async function ProgressPage() {
 
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { whoopAccessToken: true, whoopId: true, stravaAccessToken: true, stravaId: true },
+    select: { whoopAccessToken: true, whoopId: true, stravaAccessToken: true, stravaId: true, garminAccessToken: true, garminUserId: true },
   });
   const whoopConnected = !!(user?.whoopAccessToken && user?.whoopId);
   const stravaConnected = !!(user?.stravaAccessToken && user?.stravaId);
+  const garminConnected = !!(user?.garminAccessToken && user?.garminUserId);
 
-  const [classScheduleProfile, [lastActivity, todayRecovery], stravaStats, stravaRecentRuns] = await Promise.all([
+  const [classScheduleProfile, [lastActivity, todayRecovery], garminLatest, stravaStats, stravaRecentRuns] = await Promise.all([
     db.athleteProfile.findUnique({ where: { userId }, select: { classSchedule: true } }),
     whoopConnected
     ? Promise.all([
@@ -50,6 +52,13 @@ export default async function ProgressPage() {
         }),
       ])
     : [null, null] as [null, null],
+    garminConnected
+      ? db.garminDailySummary.findFirst({
+          where: { userId },
+          orderBy: { date: "desc" },
+          select: { bodyBattery: true, date: true },
+        })
+      : null,
     stravaConnected
       ? db.stravaActivity.aggregate({
           where: { userId },
@@ -337,6 +346,12 @@ export default async function ProgressPage() {
             recoveryScore={todayRecovery?.recoveryScore ?? null}
             recoveryDate={todayRecovery?.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) ?? null}
             lastActivityDate={lastActivity?.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) ?? null}
+          />
+          <GarminConnectCard
+            connected={garminConnected}
+            bodyBattery={garminLatest?.bodyBattery ?? null}
+            batteryDate={garminLatest?.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) ?? null}
+            lastSyncDate={garminLatest?.date.toLocaleDateString("en-US", { month: "short", day: "numeric" }) ?? null}
           />
           {/* Strava */}
           <div className="rounded border border-border bg-card p-4">

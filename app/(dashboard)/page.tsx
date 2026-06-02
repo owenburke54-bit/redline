@@ -4,6 +4,8 @@ import { daysUntil, formatDate } from "@/lib/utils";
 import { Zap, MessageSquare, ChevronRight } from "lucide-react";
 import { WhoopSyncButton } from "@/components/whoop/WhoopSyncButton";
 import { WhoopRings } from "@/components/whoop/WhoopRings";
+import { GarminRings } from "@/components/garmin/GarminRings";
+import { GarminSyncButton } from "@/components/garmin/GarminSyncButton";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -40,6 +42,23 @@ function trainingImpact(
   return `Low recovery. Rest day is the right call.${sportNote}`;
 }
 
+function garminTrainingImpact(bodyBattery: number | null, todayWorkoutTitle: string | null): string {
+  if (bodyBattery == null) return "Sync Garmin to get today's readiness.";
+  if (bodyBattery >= 70) {
+    return todayWorkoutTitle
+      ? `High battery. Execute ${todayWorkoutTitle} at target effort.`
+      : `High battery. No session today — good day for extra mobility or an easy shake-out.`;
+  }
+  if (bodyBattery >= 40) {
+    return todayWorkoutTitle
+      ? `Moderate battery. ${todayWorkoutTitle} is on — stay within prescribed effort, no extras.`
+      : `Moderate battery. Rest day is well-timed.`;
+  }
+  return todayWorkoutTitle
+    ? `Low battery. Consider dropping ${todayWorkoutTitle} to easy effort or swapping for rest.`
+    : `Low battery. Rest is the right call today.`;
+}
+
 export default async function DashboardPage() {
   const session = await auth();
   const userId = session!.user!.id as string;
@@ -49,8 +68,8 @@ export default async function DashboardPage() {
   const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const [user, events, todayWorkouts, todayRecovery, recentActivities, todayCycle] = await Promise.all([
-    db.user.findUnique({ where: { id: userId }, select: { id: true, name: true, dedicationScore: true, whoopAccessToken: true, whoopId: true } }),
+  const [user, events, todayWorkouts, todayRecovery, recentActivities, todayCycle, todayGarmin] = await Promise.all([
+    db.user.findUnique({ where: { id: userId }, select: { id: true, name: true, dedicationScore: true, whoopAccessToken: true, whoopId: true, garminAccessToken: true, garminUserId: true } }),
     db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" }, include: { plan: { select: { id: true } } } }),
     db.workout.findMany({
       where: { userId, scheduledDate: { gte: todayStart, lt: todayEnd } },
@@ -73,11 +92,17 @@ export default async function DashboardPage() {
       orderBy: { startDate: "desc" },
       select: { strain: true },
     }),
+    db.garminDailySummary.findFirst({
+      where: { userId },
+      orderBy: { date: "desc" },
+      select: { bodyBattery: true, stressAvg: true, restingHr: true, sleepScore: true, sleepDuration: true, sleepHrv: true, date: true },
+    }),
   ]);
 
   if (events.length === 0) redirect("/events");
 
   const whoopConnected = !!(user?.whoopAccessToken && user?.whoopId);
+  const garminConnected = !!(user?.garminAccessToken && user?.garminUserId);
 
   const todayStrain = todayCycle?.strain ?? null;
 
@@ -147,6 +172,47 @@ export default async function DashboardPage() {
                         : null;
                     })()}
                     recentActivities={recentActivities}
+                  />
+                </div>
+              </div>
+            );
+          })()}
+        </section>
+      )}
+
+      {/* Garmin readiness */}
+      {garminConnected && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase">
+              Readiness
+            </p>
+            <GarminSyncButton />
+          </div>
+          {(() => {
+            const bb = todayGarmin?.bodyBattery ?? null;
+            const accentColor = bb == null
+              ? "rgba(255,255,255,0.12)"
+              : bb >= 70 ? "#22c55e" : bb >= 40 ? "#f59e0b" : "#ef4444";
+            return (
+              <div className="rounded-xl bg-card overflow-hidden">
+                <div className="h-[3px]" style={{ backgroundColor: accentColor }} />
+                <div className="p-5">
+                  <GarminRings
+                    bodyBattery={bb}
+                    sleepScore={todayGarmin?.sleepScore ?? null}
+                    sleepDuration={todayGarmin?.sleepDuration ?? null}
+                    restingHr={todayGarmin?.restingHr ?? null}
+                    sleepHrv={todayGarmin?.sleepHrv ?? null}
+                    stressAvg={todayGarmin?.stressAvg ?? null}
+                    impactText={garminTrainingImpact(bb, todayWorkoutTitle)}
+                    staleLabel={(() => {
+                      if (!todayGarmin) return null;
+                      const daysAgo = Math.floor((Date.now() - todayGarmin.date.getTime()) / 86400000);
+                      return daysAgo > 1
+                        ? `From ${todayGarmin.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} — tap Sync to refresh`
+                        : null;
+                    })()}
                   />
                 </div>
               </div>

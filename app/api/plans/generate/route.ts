@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { selectTemplate, buildPlan, summarizePlanForAI } from "@/lib/plans/planBuilder";
+import { selectTemplate, buildPlan, summarizePlanForAI, isTriathlonEvent } from "@/lib/plans/planBuilder";
 import { buildPlanGenerationPrompt } from "@/lib/ai/coachPrompts";
 import { weeksUntil } from "@/lib/utils";
 import Anthropic from "@anthropic-ai/sdk";
@@ -46,6 +46,13 @@ export async function POST(req: NextRequest) {
   ]);
 
   if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 });
+
+  if (isTriathlonEvent(event.type)) {
+    return NextResponse.json(
+      { error: "Triathlon plans (swim/bike/run) are coming soon. Your event has been saved — we'll notify you when triathlon planning is available." },
+      { status: 422 }
+    );
+  }
 
   // Check if plan already exists
   const existingPlan = await db.trainingPlan.findUnique({ where: { eventId } });

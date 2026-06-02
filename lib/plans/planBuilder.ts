@@ -1,5 +1,7 @@
 import { HAL_HIGDON_NOVICE, HAL_HIGDON_INTERMEDIATE, HAL_HIGDON_ADVANCED } from "./templates/halHigdon";
 import { HYROX_8WK, HYROX_16WK } from "./templates/hyrox";
+import { HALF_MARATHON_12WK } from "./templates/halfMarathon";
+import { ULTRA_12WK } from "./templates/ultra";
 import type { PlanTemplateData, TemplateWeek } from "./templates/types";
 
 export type PlanTemplateKey =
@@ -7,7 +9,9 @@ export type PlanTemplateKey =
   | "HAL_HIGDON_INTERMEDIATE"
   | "HAL_HIGDON_ADVANCED"
   | "HYROX_8WK"
-  | "HYROX_16WK";
+  | "HYROX_16WK"
+  | "HALF_MARATHON_12WK"
+  | "ULTRA_12WK";
 
 const TEMPLATES: Record<PlanTemplateKey, PlanTemplateData> = {
   HAL_HIGDON_NOVICE,
@@ -15,6 +19,8 @@ const TEMPLATES: Record<PlanTemplateKey, PlanTemplateData> = {
   HAL_HIGDON_ADVANCED,
   HYROX_8WK,
   HYROX_16WK,
+  HALF_MARATHON_12WK,
+  ULTRA_12WK,
 };
 
 export interface BuiltWorkout {
@@ -39,6 +45,24 @@ export interface BuiltPlan {
   workouts: BuiltWorkout[];
 }
 
+const HYROX_EVENT_TYPES = new Set([
+  "HYROX",
+  "HYROX_WOMENS",
+  "HYROX_DOUBLES",
+  "HYROX_DOUBLES_MIXED",
+  "HYROX_DOUBLES_MENS",
+  "HYROX_DOUBLES_WOMENS",
+]);
+
+const ULTRA_EVENT_TYPES = new Set(["ULTRA_50K", "ULTRA_50M"]);
+
+const TRIATHLON_EVENT_TYPES = new Set([
+  "TRIATHLON_SPRINT",
+  "TRIATHLON_OLYMPIC",
+  "HALF_IRONMAN",
+  "IRONMAN",
+]);
+
 export function selectTemplate(
   eventType: string,
   raceDate: Date,
@@ -47,17 +71,36 @@ export function selectTemplate(
 ): PlanTemplateKey {
   const weeksOut = Math.ceil((raceDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 7));
 
-  if (eventType === "HYROX" || eventType === "HYROX_DOUBLES") {
+  if (HYROX_EVENT_TYPES.has(eventType)) {
     return weeksOut >= 14 ? "HYROX_16WK" : "HYROX_8WK";
   }
 
-  // Marathon/half marathon — select based on dedication + baseline mileage
+  if (ULTRA_EVENT_TYPES.has(eventType)) {
+    return "ULTRA_12WK";
+  }
+
+  if (eventType === "HALF_MARATHON") {
+    return "HALF_MARATHON_12WK";
+  }
+
+  if (TRIATHLON_EVENT_TYPES.has(eventType)) {
+    // Triathlon plans require swim/bike workouts not yet in the system.
+    // Callers should check for this and surface a "coming soon" error.
+    // Fallback to marathon novice so the plan system doesn't hard-fail.
+    return "HAL_HIGDON_NOVICE";
+  }
+
+  // Marathon / 5K / 10K — select based on dedication + baseline mileage
   const isExperienced = (weeklyMileageBaseline ?? 0) >= 40 || dedicationScore >= 8;
   const isIntermediate = (weeklyMileageBaseline ?? 0) >= 25 || dedicationScore >= 6;
 
   if (isExperienced) return "HAL_HIGDON_ADVANCED";
   if (isIntermediate) return "HAL_HIGDON_INTERMEDIATE";
   return "HAL_HIGDON_NOVICE";
+}
+
+export function isTriathlonEvent(eventType: string): boolean {
+  return TRIATHLON_EVENT_TYPES.has(eventType);
 }
 
 export function buildPlan(

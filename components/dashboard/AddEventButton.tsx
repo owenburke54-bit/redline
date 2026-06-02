@@ -5,17 +5,41 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
-const EVENT_TYPES = [
-  { value: "MARATHON", label: "Marathon" },
-  { value: "HALF_MARATHON", label: "Half Marathon" },
-  { value: "HYROX", label: "Hyrox" },
-  { value: "HYROX_DOUBLES", label: "Hyrox Mixed Doubles" },
-  { value: "FIVE_K", label: "5K" },
-  { value: "TEN_K", label: "10K" },
+const EVENT_TYPE_GROUPS = [
+  {
+    label: "Running",
+    types: [
+      { value: "FIVE_K", label: "5K" },
+      { value: "TEN_K", label: "10K" },
+      { value: "HALF_MARATHON", label: "Half Marathon" },
+      { value: "MARATHON", label: "Marathon" },
+      { value: "ULTRA_50K", label: "Ultra 50K" },
+      { value: "ULTRA_50M", label: "Ultra 50M" },
+    ],
+  },
+  {
+    label: "HYROX",
+    types: [
+      { value: "HYROX", label: "HYROX Men's Individual" },
+      { value: "HYROX_WOMENS", label: "HYROX Women's Individual" },
+      { value: "HYROX_DOUBLES_MIXED", label: "HYROX Doubles Mixed" },
+      { value: "HYROX_DOUBLES_MENS", label: "HYROX Doubles Men's" },
+      { value: "HYROX_DOUBLES_WOMENS", label: "HYROX Doubles Women's" },
+    ],
+  },
+  {
+    label: "Triathlon",
+    types: [
+      { value: "TRIATHLON_SPRINT", label: "Triathlon Sprint" },
+      { value: "TRIATHLON_OLYMPIC", label: "Triathlon Olympic" },
+      { value: "HALF_IRONMAN", label: "Half Ironman (70.3)" },
+      { value: "IRONMAN", label: "Full Ironman (140.6)" },
+    ],
+  },
 ];
 
 export function AddEventButton() {
@@ -72,8 +96,13 @@ export function AddEventButton() {
             <Select onValueChange={setType} value={type} required>
               <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
               <SelectContent>
-                {EVENT_TYPES.map(t => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                {EVENT_TYPE_GROUPS.map(group => (
+                  <SelectGroup key={group.label}>
+                    <SelectLabel className="text-xs text-muted-foreground uppercase tracking-wider px-2 py-1">{group.label}</SelectLabel>
+                    {group.types.map(t => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>

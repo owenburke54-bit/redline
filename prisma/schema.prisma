@@ -20,21 +20,27 @@ model User {
   whoopAccessToken   String?
   whoopRefreshToken  String?
   whoopTokenExpiry   DateTime?
+  garminUserId             String?   @unique
+  garminAccessToken        String?
+  garminAccessTokenSecret  String?
+  garminOAuthToken         String?
+  garminRequestTokenSecret String?
   dedicationScore    Int       @default(7)
   onboardingComplete Boolean   @default(false)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  accounts         Account[]
-  sessions         Session[]
-  events           Event[]
-  plans            TrainingPlan[]
-  workouts         Workout[]
-  stravaActivities StravaActivity[]
-  whoopActivities  WhoopActivity[]
-  whoopRecoveries  WhoopRecovery[]
-  checkins         WeeklyCheckin[]
-  athleteProfile   AthleteProfile?
+  accounts              Account[]
+  sessions              Session[]
+  events                Event[]
+  plans                 TrainingPlan[]
+  workouts              Workout[]
+  stravaActivities      StravaActivity[]
+  whoopActivities       WhoopActivity[]
+  whoopRecoveries       WhoopRecovery[]
+  garminDailySummaries  GarminDailySummary[]
+  checkins              WeeklyCheckin[]
+  athleteProfile        AthleteProfile?
 }
 
 model Account {
@@ -109,12 +115,22 @@ model Event {
 }
 
 enum EventType {
-  MARATHON
-  HALF_MARATHON
-  HYROX
-  HYROX_DOUBLES
   FIVE_K
   TEN_K
+  HALF_MARATHON
+  MARATHON
+  ULTRA_50K
+  ULTRA_50M
+  HYROX
+  HYROX_WOMENS
+  HYROX_DOUBLES
+  HYROX_DOUBLES_MIXED
+  HYROX_DOUBLES_MENS
+  HYROX_DOUBLES_WOMENS
+  TRIATHLON_SPRINT
+  TRIATHLON_OLYMPIC
+  HALF_IRONMAN
+  IRONMAN
 }
 
 model TrainingPlan {
@@ -144,6 +160,8 @@ enum PlanTemplate {
   HAL_HIGDON_ADVANCED
   HYROX_8WK
   HYROX_16WK
+  HALF_MARATHON_12WK
+  ULTRA_12WK
 }
 
 enum PlanStatus {
@@ -290,6 +308,25 @@ model WhoopRecovery {
   restingHr     Float?
   sleepScore    Float?
   sleepDuration Int?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+}
+
+model GarminDailySummary {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  date          DateTime
+  bodyBattery   Float?
+  stressAvg     Float?
+  restingHr     Int?
+  steps         Int?
+  sleepScore    Float?
+  sleepDuration Int?
+  sleepHrv      Float?
 
   createdAt DateTime @default(now())
 
