@@ -8,6 +8,7 @@ import { z } from "zod";
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
+  rememberMe: z.string().optional(),
 });
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -22,6 +23,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        rememberMe: { label: "Remember me", type: "checkbox" },
       },
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
@@ -40,6 +42,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           name: user.name,
           onboardingComplete: user.onboardingComplete,
+          rememberMe: parsed.data.rememberMe !== "false",
         };
       },
     }),
@@ -49,6 +52,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.onboardingComplete = (user as { onboardingComplete?: boolean }).onboardingComplete ?? false;
+        const rememberMe = (user as { rememberMe?: boolean }).rememberMe ?? true;
+        if (!rememberMe) {
+          // Session-only: expire JWT in 8 hours regardless of cookie lifetime
+          token.exp = Math.floor(Date.now() / 1000) + 8 * 60 * 60;
+        }
       }
       // Re-fetch onboardingComplete on session update (called after onboarding completes)
       if (trigger === "update" && token.id) {

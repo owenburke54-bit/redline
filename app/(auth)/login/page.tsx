@@ -13,6 +13,7 @@ import { toast } from "sonner";
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -23,6 +24,7 @@ export default function LoginPage() {
       const result = await signIn("credentials", {
         email: fd.get("email"),
         password: fd.get("password"),
+        rememberMe: String(rememberMe),
         redirect: false,
       });
 
@@ -75,6 +77,19 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 placeholder="••••••••"
               />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                id="rememberMe"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={e => setRememberMe(e.target.checked)}
+                className="h-4 w-4 cursor-pointer accent-primary"
+              />
+              <label htmlFor="rememberMe" className="text-sm text-muted-foreground cursor-pointer select-none">
+                Remember me
+              </label>
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
