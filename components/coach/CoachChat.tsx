@@ -20,7 +20,15 @@ export function CoachChat() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    loadInitialMessage();
+    const pending = localStorage.getItem("coachPendingQuestion");
+    if (pending) {
+      localStorage.removeItem("coachPendingQuestion");
+      const userMsg: Message = { role: "user", content: pending };
+      setMessages([userMsg]);
+      streamResponse([userMsg]);
+    } else {
+      loadInitialMessage();
+    }
   }, []);
 
   useEffect(() => {

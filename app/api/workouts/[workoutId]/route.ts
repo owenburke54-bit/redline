@@ -4,10 +4,11 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 
 const schema = z.object({
-  status: z.enum(["SCHEDULED", "COMPLETED", "SKIPPED"]),
+  status: z.enum(["SCHEDULED", "COMPLETED", "SKIPPED"]).optional(),
   actualDistance: z.number().optional(),
   actualDuration: z.number().int().optional(),
   perceivedEffort: z.number().min(1).max(10).optional(),
+  description: z.string().max(3000).optional(),
 });
 
 export async function PATCH(
@@ -28,14 +29,19 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const { status, actualDistance, actualDuration, perceivedEffort, description } = parsed.data;
+
   const updated = await db.workout.update({
     where: { id: workoutId },
     data: {
-      status: parsed.data.status,
-      completedAt: parsed.data.status === "COMPLETED" ? new Date() : null,
-      actualDistance: parsed.data.actualDistance ?? null,
-      actualDuration: parsed.data.actualDuration ?? null,
-      perceivedEffort: parsed.data.perceivedEffort ?? null,
+      ...(status !== undefined && {
+        status,
+        completedAt: status === "COMPLETED" ? new Date() : null,
+      }),
+      ...(actualDistance !== undefined && { actualDistance }),
+      ...(actualDuration !== undefined && { actualDuration }),
+      ...(perceivedEffort !== undefined && { perceivedEffort }),
+      ...(description !== undefined && { description }),
     },
     select: { status: true },
   });

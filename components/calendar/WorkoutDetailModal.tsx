@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, MapPin, Clock, Zap, Target, CheckCircle2, XCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertTriangle, MapPin, Clock, Zap, Target, CheckCircle2, XCircle, Pencil, MessageSquare } from "lucide-react";
 
 export interface Workout {
   id: string;
@@ -129,6 +131,7 @@ export function WorkoutDetailModal({
   onClose: () => void;
   onWorkoutUpdated?: (id: string, updates: Partial<Workout>) => void;
 }) {
+  const router = useRouter();
   const isHyrox = workout.eventType.startsWith("HYROX");
   const accentColor = isHyrox ? "var(--hyrox-color)" : "var(--marathon-color)";
   const canLog = workout.status === "SCHEDULED" && workout.type !== "REST";
@@ -140,6 +143,11 @@ export function WorkoutDetailModal({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Description editing
+  const [editing, setEditing] = useState(false);
+  const [editDesc, setEditDesc] = useState(workout.description ?? "");
+  const [descSaving, setDescSaving] = useState(false);
 
   const date = new Date(workout.scheduledDate);
   const dateStr = date.toLocaleDateString("en-US", {
@@ -184,6 +192,30 @@ export function WorkoutDetailModal({
     } finally {
       setSaving(false);
     }
+  }
+
+  async function saveDescription() {
+    setDescSaving(true);
+    try {
+      const res = await fetch(`/api/workouts/${workout.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: editDesc }),
+      });
+      if (res.ok) {
+        onWorkoutUpdated?.(workout.id, { description: editDesc || null });
+        setEditing(false);
+      }
+    } finally {
+      setDescSaving(false);
+    }
+  }
+
+  function askCoach() {
+    const question = `I need help with my upcoming workout: ${workout.title} (${workout.type}) scheduled for ${dateStr}. ${workout.description ? `The description says: "${workout.description}". ` : ""}Can you give me detailed guidance, alternative exercises, and tips for this session?`;
+    localStorage.setItem("coachPendingQuestion", question);
+    onClose();
+    router.push("/coach");
   }
 
   return (
@@ -254,12 +286,65 @@ export function WorkoutDetailModal({
             </div>
           )}
 
-          {/* Description */}
-          {workout.description && (
-            <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
-              {workout.description}
-            </p>
-          )}
+          {/* Description + edit */}
+          <div className="space-y-2">
+            {!editing ? (
+              <>
+                {workout.description && (
+                  <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
+                    {workout.description}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={() => { setEditDesc(workout.description ?? ""); setEditing(true); }}
+                    className="flex items-center gap-1 text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                  >
+                    <Pencil className="h-2.5 w-2.5" /> Customize session
+                  </button>
+                  <span className="text-muted-foreground/20 text-[10px]">·</span>
+                  <button
+                    onClick={askCoach}
+                    className="flex items-center gap-1 text-[10px] hover:opacity-80 transition-opacity font-medium"
+                    style={{ color: accentColor }}
+                  >
+                    <MessageSquare className="h-2.5 w-2.5" /> Ask coach
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <Label className="text-xs">Session notes / custom exercises</Label>
+                <Textarea
+                  value={editDesc}
+                  onChange={e => setEditDesc(e.target.value)}
+                  rows={5}
+                  className="text-xs resize-none"
+                  placeholder="Override the session description with your own notes, alternative exercises, or modified reps/weights…"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 text-xs"
+                    onClick={() => setEditing(false)}
+                    disabled={descSaving}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1 text-xs text-background"
+                    style={{ backgroundColor: accentColor }}
+                    onClick={saveDescription}
+                    disabled={descSaving}
+                  >
+                    {descSaving ? "Saving…" : "Save changes"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Coach tip */}
           {tip && (

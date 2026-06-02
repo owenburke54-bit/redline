@@ -49,9 +49,9 @@ function formatMonthRange(start: Date, end: Date): string {
   return `${startStr} / ${endStr}`;
 }
 
-export function CalendarView({ workouts: initialWorkouts, currentWeekStart }: CalendarViewProps) {
-  const initialMonday = getMonday(new Date(currentWeekStart));
-  const [weekStart, setWeekStart] = useState<Date>(initialMonday);
+export function CalendarView({ workouts: initialWorkouts, currentWeekStart: _ }: CalendarViewProps) {
+  // Always initialise from the client's local clock — avoids UTC→local timezone shift bug
+  const [weekStart, setWeekStart] = useState<Date>(() => getMonday(new Date()));
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>(initialWorkouts);
 
