@@ -13,15 +13,64 @@ const schema = z.object({
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-function getWeekBounds() {
+function getWeekBounds(offsetWeeks = 0) {
   const now = new Date();
   const day = now.getDay();
   const monday = new Date(now);
-  monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+  monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1) + offsetWeeks * 7);
   monday.setHours(0, 0, 0, 0);
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 7);
   return { monday, sunday };
+}
+
+const RUN_WORKOUT_TYPES = new Set(["EASY_RUN", "LONG_RUN", "TEMPO", "INTERVALS", "RACE"]);
+
+async function adjustNextWeek(
+  userId: string,
+  perceivedEffort: number,
+  bodyFeel: number
+): Promise<void> {
+  const shouldReduce = bodyFeel <= 3 || perceivedEffort >= 9;
+  const shouldIncrease = bodyFeel >= 9 && perceivedEffort <= 4;
+
+  if (!shouldReduce && !shouldIncrease) return;
+
+  const { monday, sunday } = getWeekBounds(1);
+
+  const nextWeekWorkouts = await db.workout.findMany({
+    where: {
+      userId,
+      scheduledDate: { gte: monday, lt: sunday },
+      status: "SCHEDULED",
+      targetDistance: { not: null },
+    },
+    select: { id: true, type: true, targetDistance: true },
+  });
+
+  const updates = nextWeekWorkouts
+    .filter(w => RUN_WORKOUT_TYPES.has(w.type))
+    .map(w => {
+      const current = w.targetDistance!;
+      let adjusted: number;
+      if (shouldReduce) {
+        adjusted = Math.round(current * 0.85 * 10) / 10;
+      } else {
+        // Only increase easy runs, not tempo/intervals/long
+        if (w.type !== "EASY_RUN") return null;
+        adjusted = Math.round(current * 1.1 * 10) / 10;
+      }
+      if (adjusted === current) return null;
+      return db.workout.update({
+        where: { id: w.id },
+        data: { targetDistance: adjusted },
+      });
+    })
+    .filter(Boolean);
+
+  if (updates.length > 0) {
+    await Promise.all(updates);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -33,7 +82,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  const { monday, sunday } = getWeekBounds();
+  const { monday, sunday } = getWeekBounds(0);
 
   const [weekWorkouts, user, events] = await Promise.all([
     db.workout.findMany({
@@ -90,18 +139,21 @@ Write a coach response (under 80 words). Acknowledge the week honestly. If they 
     aiResponse = "Check-in saved. Keep consistent this week.";
   }
 
-  await db.weeklyCheckin.create({
-    data: {
-      userId,
-      weekOf: monday,
-      perceivedEffort: parsed.data.perceivedEffort,
-      bodyFeel: parsed.data.bodyFeel,
-      completedCount,
-      plannedCount: scheduledCount,
-      notes: parsed.data.notes ?? null,
-      aiResponse,
-    },
-  });
+  await Promise.all([
+    db.weeklyCheckin.create({
+      data: {
+        userId,
+        weekOf: monday,
+        perceivedEffort: parsed.data.perceivedEffort,
+        bodyFeel: parsed.data.bodyFeel,
+        completedCount,
+        plannedCount: scheduledCount,
+        notes: parsed.data.notes ?? null,
+        aiResponse,
+      },
+    }),
+    adjustNextWeek(userId, parsed.data.perceivedEffort, parsed.data.bodyFeel),
+  ]);
 
   return NextResponse.json({ aiResponse, completedCount, plannedCount: scheduledCount });
 }

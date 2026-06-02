@@ -9,7 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -20,14 +22,41 @@ import { cn } from "@/lib/utils";
 const STEPS = ["profile", "dedication", "event"] as const;
 type Step = (typeof STEPS)[number];
 
-const EVENT_TYPES = [
-  { value: "MARATHON", label: "Marathon" },
-  { value: "HALF_MARATHON", label: "Half Marathon" },
-  { value: "HYROX", label: "Hyrox" },
-  { value: "HYROX_DOUBLES", label: "Hyrox Mixed Doubles" },
-  { value: "FIVE_K", label: "5K" },
-  { value: "TEN_K", label: "10K" },
+const EVENT_TYPE_GROUPS = [
+  {
+    label: "Running",
+    types: [
+      { value: "FIVE_K", label: "5K" },
+      { value: "TEN_K", label: "10K" },
+      { value: "HALF_MARATHON", label: "Half Marathon" },
+      { value: "MARATHON", label: "Marathon" },
+      { value: "ULTRA_50K", label: "Ultra 50K" },
+      { value: "ULTRA_50M", label: "Ultra 50M" },
+    ],
+  },
+  {
+    label: "HYROX",
+    types: [
+      { value: "HYROX", label: "HYROX" },
+      { value: "HYROX_WOMENS", label: "HYROX Women's" },
+      { value: "HYROX_DOUBLES", label: "HYROX Doubles Mixed" },
+      { value: "HYROX_DOUBLES_MENS", label: "HYROX Doubles Men" },
+      { value: "HYROX_DOUBLES_WOMENS", label: "HYROX Doubles Women" },
+    ],
+  },
+  {
+    label: "Triathlon — coming soon",
+    types: [
+      { value: "TRIATHLON_SPRINT", label: "Sprint Triathlon" },
+      { value: "TRIATHLON_OLYMPIC", label: "Olympic Triathlon" },
+      { value: "HALF_IRONMAN", label: "Half Ironman" },
+      { value: "IRONMAN", label: "Full Ironman" },
+    ],
+  },
 ];
+
+// flat list for label lookups
+const EVENT_TYPES = EVENT_TYPE_GROUPS.flatMap(g => g.types);
 
 const DEDICATION_COPY: Record<number, string> = {
   1: "Easy maintenance. Fitness without pressure.",
@@ -446,10 +475,15 @@ export function OnboardingFlow({ userId: _userId, userName }: Props) {
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {EVENT_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
+                    {EVENT_TYPE_GROUPS.map((group) => (
+                      <SelectGroup key={group.label}>
+                        <SelectLabel>{group.label}</SelectLabel>
+                        {group.types.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     ))}
                   </SelectContent>
                 </Select>

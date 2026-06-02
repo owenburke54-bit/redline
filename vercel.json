@@ -9,6 +9,14 @@
       "schedule": "0 6 * * *"
     },
     {
+      "path": "/api/reminders/daily",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/reminders/checkin",
+      "schedule": "0 9 * * 0"
+    },
+    {
       "path": "/api/plans/review",
       "schedule": "0 7 * * 1"
     },

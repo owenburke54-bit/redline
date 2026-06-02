@@ -84,6 +84,7 @@ export default async function ProgressPage() {
         type: true,
         status: true,
         targetDistance: true,
+        actualDistance: true,
         plan: { select: { event: { select: { type: true } } } },
       },
       orderBy: { scheduledDate: "asc" },
@@ -114,13 +115,18 @@ export default async function ProgressPage() {
     const completed = weekWorkouts.filter(w => w.status === "COMPLETED").length;
     const planned = nonRest.length;
 
-    const marathonMi = nonRest
-      .filter(w => !w.plan.event.type.startsWith("HYROX"))
-      .reduce((s, w) => s + (w.targetDistance ?? 0), 0);
+    const runWorkouts = nonRest.filter(w => !w.plan.event.type.startsWith("HYROX"));
+    const hyroxWorkouts = nonRest.filter(w => w.plan.event.type.startsWith("HYROX"));
 
-    const hyroxMi = nonRest
-      .filter(w => w.plan.event.type.startsWith("HYROX"))
-      .reduce((s, w) => s + (w.targetDistance ?? 0), 0);
+    const marathonMi = runWorkouts.reduce((s, w) => s + (w.targetDistance ?? 0), 0);
+    const hyroxMi = hyroxWorkouts.reduce((s, w) => s + (w.targetDistance ?? 0), 0);
+
+    const actualMarathonMi = runWorkouts
+      .filter(w => w.status === "COMPLETED")
+      .reduce((s, w) => s + (w.actualDistance ?? w.targetDistance ?? 0), 0);
+    const actualHyroxMi = hyroxWorkouts
+      .filter(w => w.status === "COMPLETED")
+      .reduce((s, w) => s + (w.actualDistance ?? w.targetDistance ?? 0), 0);
 
     const isPast = weekSun < now;
     const isCurrentWeek =
@@ -130,6 +136,8 @@ export default async function ProgressPage() {
       label: weekMon.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
       marathonMi: Math.round(marathonMi * 10) / 10,
       hyroxMi: Math.round(hyroxMi * 10) / 10,
+      actualMarathonMi: Math.round(actualMarathonMi * 10) / 10,
+      actualHyroxMi: Math.round(actualHyroxMi * 10) / 10,
       completed,
       planned,
       rate: planned > 0 ? Math.round((completed / planned) * 100) : 0,
@@ -239,21 +247,33 @@ export default async function ProgressPage() {
             <div>
               <h2 className="text-sm font-semibold">Weekly Training Load</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Planned miles by week — past 4 weeks + next 8
+                Planned vs actual miles — past 4 weeks + next 8
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap justify-end">
               {hasMarathon && (
-                <div className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 rounded-full bg-[var(--marathon-color)]" />
-                  <span className="text-xs text-muted-foreground">Run</span>
-                </div>
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-full bg-[var(--marathon-color)]" />
+                    <span className="text-xs text-muted-foreground">Run planned</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-full bg-[var(--marathon-color)] opacity-40" />
+                    <span className="text-xs text-muted-foreground">actual</span>
+                  </div>
+                </>
               )}
               {hasHyrox && (
-                <div className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 rounded-full bg-[var(--hyrox-color)]" />
-                  <span className="text-xs text-muted-foreground">Hyrox</span>
-                </div>
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-full bg-[var(--hyrox-color)]" />
+                    <span className="text-xs text-muted-foreground">Hyrox planned</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-full bg-[var(--hyrox-color)] opacity-40" />
+                    <span className="text-xs text-muted-foreground">actual</span>
+                  </div>
+                </>
               )}
             </div>
           </div>
