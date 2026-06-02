@@ -8,8 +8,6 @@ export function MobilePreview() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  if (process.env.NODE_ENV !== "development") return null;
-
   return (
     <>
       <button

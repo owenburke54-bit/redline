@@ -16,70 +16,72 @@ interface CalendarViewProps {
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-function getMonday(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
+// ─── UTC-safe date helpers ──────────────────────────────────────────────────
+// Workout scheduledDates are UTC midnight ISO strings. All comparisons and
+// display must use UTC methods so a workout on "2026-06-19T00:00:00Z" shows
+// as Friday June 19 everywhere regardless of the browser's local timezone.
+
+function getMondayUTC(date: Date): Date {
+  const day = date.getUTCDay(); // 0 = Sun
   const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + diff));
 }
 
-function addDays(date: Date, n: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d;
+function addDaysUTC(date: Date, n: number): Date {
+  return new Date(date.getTime() + n * 86_400_000);
 }
 
-function isSameDay(a: Date, b: Date): boolean {
+function isSameDayUTC(a: Date, b: Date): boolean {
   return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
   );
 }
 
 function formatMonthRange(start: Date, end: Date): string {
-  const opts: Intl.DateTimeFormatOptions = { month: "long", year: "numeric" };
-  if (start.getMonth() === end.getMonth()) {
+  const opts: Intl.DateTimeFormatOptions = { month: "long", year: "numeric", timeZone: "UTC" };
+  if (start.getUTCMonth() === end.getUTCMonth()) {
     return start.toLocaleDateString("en-US", opts);
   }
-  const startStr = start.toLocaleDateString("en-US", { month: "short" });
-  const endStr = end.toLocaleDateString("en-US", opts);
-  return `${startStr} / ${endStr}`;
+  return `${start.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" })} / ${end.toLocaleDateString("en-US", opts)}`;
 }
 
-export function CalendarView({ workouts: initialWorkouts, currentWeekStart: _ }: CalendarViewProps) {
-  // Always initialise from the client's local clock — avoids UTC→local timezone shift bug
-  const [weekStart, setWeekStart] = useState<Date>(() => getMonday(new Date()));
+export function CalendarView({ workouts: initialWorkouts }: CalendarViewProps) {
+  const [weekStart, setWeekStart] = useState<Date>(() => getMondayUTC(new Date()));
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>(initialWorkouts);
 
-  const weekEnd = addDays(weekStart, 6);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const weekEnd = addDaysUTC(weekStart, 6);
+  const todayUTC = new Date();
 
-  function prevWeek() { setWeekStart(prev => addDays(prev, -7)); }
-  function nextWeek() { setWeekStart(prev => addDays(prev, 7)); }
-  function goToday() { setWeekStart(getMonday(new Date())); }
+  function prevWeek() { setWeekStart(prev => addDaysUTC(prev, -7)); }
+  function nextWeek() { setWeekStart(prev => addDaysUTC(prev, 7)); }
+  function goToday() { setWeekStart(getMondayUTC(new Date())); }
 
   function handleWorkoutUpdated(id: string, updates: Partial<Workout>) {
     setWorkouts(prev => prev.map(w => w.id === id ? { ...w, ...updates } : w));
-    // Also update the selected workout so the modal reflects the new state before closing
     setSelectedWorkout(prev => prev?.id === id ? { ...prev, ...updates } : prev);
   }
 
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const days = Array.from({ length: 7 }, (_, i) => addDaysUTC(weekStart, i));
 
   const workoutsByDay = days.map(day =>
-    workouts.filter(w => isSameDay(new Date(w.scheduledDate), day))
+    workouts.filter(w => isSameDayUTC(new Date(w.scheduledDate), day))
   );
 
-  const hasConflicts = workoutsByDay.some(dayWorkouts =>
-    dayWorkouts.some(w => w.conflictFlag)
-  );
-
+  const thisWeekEmpty = workoutsByDay.every(d => d.length === 0);
+  const hasConflicts = workoutsByDay.some(dayWorkouts => dayWorkouts.some(w => w.conflictFlag));
   const eventNames = [...new Set(workouts.map(w => w.eventName))];
+
+  // Find the earliest scheduled workout to tell the user when their plan starts
+  const firstWorkout = workouts.length > 0
+    ? workouts.reduce((a, b) => new Date(a.scheduledDate) < new Date(b.scheduledDate) ? a : b)
+    : null;
+  const firstWorkoutDate = firstWorkout ? new Date(firstWorkout.scheduledDate) : null;
+  const planStartsAfterThisWeek = firstWorkoutDate
+    ? firstWorkoutDate.getTime() > weekEnd.getTime()
+    : false;
 
   return (
     <div className="space-y-4">
@@ -127,12 +129,33 @@ export function CalendarView({ workouts: initialWorkouts, currentWeekStart: _ }:
         </div>
       )}
 
+      {/* Plan-start hint when viewing a week before training begins */}
+      {thisWeekEmpty && planStartsAfterThisWeek && firstWorkoutDate && (
+        <div className="rounded-lg border border-border/40 bg-muted/20 px-4 py-3 flex items-center justify-between gap-4">
+          <p className="text-xs text-muted-foreground">
+            Your plan starts{" "}
+            <span className="text-foreground font-semibold">
+              {firstWorkoutDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })}
+            </span>
+            . Navigate forward to see your schedule.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs shrink-0"
+            onClick={() => setWeekStart(getMondayUTC(firstWorkoutDate))}
+          >
+            Jump to plan start →
+          </Button>
+        </div>
+      )}
+
       {/* Week grid */}
       <div className="overflow-x-auto">
         <div className="grid grid-cols-7 gap-2 min-w-[560px]">
           {/* Day headers */}
           {days.map((day, i) => {
-            const isToday = isSameDay(day, today);
+            const isToday = isSameDayUTC(day, todayUTC);
             return (
               <div key={i} className="text-center">
                 <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
@@ -144,7 +167,7 @@ export function CalendarView({ workouts: initialWorkouts, currentWeekStart: _ }:
                     isToday ? "bg-primary text-primary-foreground" : "text-foreground"
                   )}
                 >
-                  {day.getDate()}
+                  {day.getUTCDate()}
                 </div>
               </div>
             );
@@ -169,7 +192,7 @@ export function CalendarView({ workouts: initialWorkouts, currentWeekStart: _ }:
         </div>
       </div>
 
-      {/* Empty state */}
+      {/* Empty state — no plan at all */}
       {workouts.length === 0 && (
         <div className="rounded-xl border border-dashed border-border/40 p-16 text-center mt-4">
           <Calendar className="h-7 w-7 text-muted-foreground/20 mx-auto mb-4" />
@@ -180,7 +203,6 @@ export function CalendarView({ workouts: initialWorkouts, currentWeekStart: _ }:
         </div>
       )}
 
-      {/* Workout detail modal */}
       {selectedWorkout && (
         <WorkoutDetailModal
           workout={selectedWorkout}
