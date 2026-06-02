@@ -6,27 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { WorkoutCard } from "./WorkoutCard";
 import { WorkoutDetailModal } from "./WorkoutDetailModal";
+import type { Workout } from "./WorkoutDetailModal";
 import { cn } from "@/lib/utils";
-
-interface Workout {
-  id: string;
-  scheduledDate: string;
-  type: string;
-  title: string;
-  description: string | null;
-  targetDistance: number | null;
-  targetDuration: number | null;
-  targetPace: string | null;
-  intensityZone: number | null;
-  isHyroxSim: boolean;
-  status: string;
-  conflictFlag: boolean;
-  conflictNote: string | null;
-  eventType: string;
-  eventName: string;
-  goalTime?: string | null;
-  planId: string;
-}
 
 interface CalendarViewProps {
   workouts: Workout[];
@@ -68,23 +49,24 @@ function formatMonthRange(start: Date, end: Date): string {
   return `${startStr} / ${endStr}`;
 }
 
-export function CalendarView({ workouts, currentWeekStart }: CalendarViewProps) {
+export function CalendarView({ workouts: initialWorkouts, currentWeekStart }: CalendarViewProps) {
   const initialMonday = getMonday(new Date(currentWeekStart));
   const [weekStart, setWeekStart] = useState<Date>(initialMonday);
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
+  const [workouts, setWorkouts] = useState<Workout[]>(initialWorkouts);
 
   const weekEnd = addDays(weekStart, 6);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  function prevWeek() {
-    setWeekStart(prev => addDays(prev, -7));
-  }
-  function nextWeek() {
-    setWeekStart(prev => addDays(prev, 7));
-  }
-  function goToday() {
-    setWeekStart(getMonday(new Date()));
+  function prevWeek() { setWeekStart(prev => addDays(prev, -7)); }
+  function nextWeek() { setWeekStart(prev => addDays(prev, 7)); }
+  function goToday() { setWeekStart(getMonday(new Date())); }
+
+  function handleWorkoutUpdated(id: string, updates: Partial<Workout>) {
+    setWorkouts(prev => prev.map(w => w.id === id ? { ...w, ...updates } : w));
+    // Also update the selected workout so the modal reflects the new state before closing
+    setSelectedWorkout(prev => prev?.id === id ? { ...prev, ...updates } : prev);
   }
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -104,13 +86,9 @@ export function CalendarView({ workouts, currentWeekStart }: CalendarViewProps) 
       {/* Header */}
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-2">
-            Training
-          </p>
+          <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-2">Training</p>
           <h1 className="text-[2rem] font-black tracking-tight leading-none">Calendar</h1>
-          <p className="text-[13px] text-muted-foreground mt-2">
-            {formatMonthRange(weekStart, weekEnd)}
-          </p>
+          <p className="text-[13px] text-muted-foreground mt-2">{formatMonthRange(weekStart, weekEnd)}</p>
         </div>
         <div className="flex items-center gap-2">
           {hasConflicts && (
@@ -149,47 +127,47 @@ export function CalendarView({ workouts, currentWeekStart }: CalendarViewProps) 
         </div>
       )}
 
-      {/* Week grid — horizontally scrollable on mobile */}
+      {/* Week grid */}
       <div className="overflow-x-auto">
-      <div className="grid grid-cols-7 gap-2 min-w-[560px]">
-        {/* Day headers */}
-        {days.map((day, i) => {
-          const isToday = isSameDay(day, today);
-          return (
-            <div key={i} className="text-center">
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                {DAY_LABELS[i]}
-              </p>
-              <div
-                className={cn(
-                  "mx-auto h-7 w-7 rounded-full flex items-center justify-center text-sm font-semibold",
-                  isToday ? "bg-primary text-primary-foreground" : "text-foreground"
-                )}
-              >
-                {day.getDate()}
+        <div className="grid grid-cols-7 gap-2 min-w-[560px]">
+          {/* Day headers */}
+          {days.map((day, i) => {
+            const isToday = isSameDay(day, today);
+            return (
+              <div key={i} className="text-center">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                  {DAY_LABELS[i]}
+                </p>
+                <div
+                  className={cn(
+                    "mx-auto h-7 w-7 rounded-full flex items-center justify-center text-sm font-semibold",
+                    isToday ? "bg-primary text-primary-foreground" : "text-foreground"
+                  )}
+                >
+                  {day.getDate()}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
 
-        {/* Workout columns */}
-        {workoutsByDay.map((dayWorkouts, i) => (
-          <div key={i} className="min-h-[120px] space-y-1.5 pt-1">
-            {dayWorkouts.length === 0 ? (
-              <div className="h-full min-h-[80px] rounded border border-dashed border-border/20" />
-            ) : (
-              dayWorkouts.map(workout => (
-                <WorkoutCard
-                  key={workout.id}
-                  workout={workout}
-                  onClick={() => setSelectedWorkout(workout)}
-                />
-              ))
-            )}
-          </div>
-        ))}
+          {/* Workout columns */}
+          {workoutsByDay.map((dayWorkouts, i) => (
+            <div key={i} className="min-h-[120px] space-y-1.5 pt-1">
+              {dayWorkouts.length === 0 ? (
+                <div className="h-full min-h-[80px] rounded border border-dashed border-border/20" />
+              ) : (
+                dayWorkouts.map(workout => (
+                  <WorkoutCard
+                    key={workout.id}
+                    workout={workout}
+                    onClick={() => setSelectedWorkout(workout)}
+                  />
+                ))
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-      </div>{/* end overflow-x-auto */}
 
       {/* Empty state */}
       {workouts.length === 0 && (
@@ -207,6 +185,7 @@ export function CalendarView({ workouts, currentWeekStart }: CalendarViewProps) 
         <WorkoutDetailModal
           workout={selectedWorkout}
           onClose={() => setSelectedWorkout(null)}
+          onWorkoutUpdated={handleWorkoutUpdated}
         />
       )}
     </div>

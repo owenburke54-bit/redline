@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,9 +8,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, MapPin, Clock, Zap, Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { AlertTriangle, MapPin, Clock, Zap, Target, CheckCircle2, XCircle } from "lucide-react";
 
-interface Workout {
+export interface Workout {
   id: string;
   type: string;
   title: string;
@@ -20,6 +24,9 @@ interface Workout {
   intensityZone: number | null;
   isHyroxSim: boolean;
   status: string;
+  actualDistance: number | null;
+  actualDuration: number | null;
+  perceivedEffort: number | null;
   conflictFlag: boolean;
   conflictNote: string | null;
   eventType: string;
@@ -60,7 +67,6 @@ const WORKOUT_TIPS: Partial<Record<string, string>> = {
   CROSS_TRAIN: "Keep it truly easy — heart rate in Zone 1 to low Zone 2. This is active recovery, not a second workout.",
 };
 
-// Pace guidance utilities
 const EVENT_DISTANCES_MI: Record<string, number> = {
   MARATHON: 26.2,
   HALF_MARATHON: 13.1,
@@ -68,7 +74,6 @@ const EVENT_DISTANCES_MI: Record<string, number> = {
   TEN_K: 6.214,
 };
 
-// Seconds per mile relative to goal race pace per zone
 const ZONE_PACE_OFFSETS: Record<number, number> = {
   1: 150,
   2: 90,
@@ -110,36 +115,72 @@ function getTargetPace(
   return `${secsToMmss(zonePace)}/mi`;
 }
 
+const EFFORT_LABELS: Record<number, string> = {
+  1: "Very Easy", 2: "Easy", 3: "Moderate", 4: "Moderate+", 5: "Hard",
+  6: "Hard+", 7: "Very Hard", 8: "Extremely Hard", 9: "Near Max", 10: "Max",
+};
+
 export function WorkoutDetailModal({
   workout,
   onClose,
+  onWorkoutUpdated,
 }: {
   workout: Workout;
   onClose: () => void;
+  onWorkoutUpdated?: (id: string, updates: Partial<Workout>) => void;
 }) {
   const isHyrox = workout.eventType.startsWith("HYROX");
   const accentColor = isHyrox ? "var(--hyrox-color)" : "var(--marathon-color)";
+  const canLog = workout.status === "SCHEDULED" && workout.type !== "REST";
+
+  const [actualDist, setActualDist] = useState(
+    workout.targetDistance != null ? String(workout.targetDistance) : ""
+  );
+  const [effort, setEffort] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const date = new Date(workout.scheduledDate);
   const dateStr = date.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
+    weekday: "long", month: "long", day: "numeric", timeZone: "UTC",
   });
 
   const targetPace = getTargetPace(workout.goalTime, workout.eventType, workout.intensityZone);
   const tip = WORKOUT_TIPS[workout.type];
 
+  async function logWorkout(status: "COMPLETED" | "SKIPPED") {
+    setSaving(true);
+    const body: Record<string, unknown> = { status };
+    if (status === "COMPLETED") {
+      const dist = parseFloat(actualDist);
+      if (!isNaN(dist) && dist > 0) body.actualDistance = dist;
+      if (effort != null) body.perceivedEffort = effort;
+    }
+
+    const res = await fetch(`/api/workouts/${workout.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    setSaving(false);
+    if (res.ok) {
+      setSaved(true);
+      onWorkoutUpdated?.(workout.id, {
+        status,
+        actualDistance: body.actualDistance as number | undefined ?? null,
+        perceivedEffort: body.perceivedEffort as number | undefined ?? null,
+      });
+      setTimeout(onClose, 800);
+    }
+  }
+
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-1">
-            <span
-              className="text-xs font-semibold uppercase tracking-wider"
-              style={{ color: accentColor }}
-            >
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: accentColor }}>
               {TYPE_LABELS[workout.type] ?? workout.type}
             </span>
             {workout.isHyroxSim && (
@@ -149,6 +190,9 @@ export function WorkoutDetailModal({
             )}
             {workout.status === "COMPLETED" && (
               <Badge variant="outline" className="text-[10px] border-green-600 text-green-600">Done</Badge>
+            )}
+            {workout.status === "SKIPPED" && (
+              <Badge variant="outline" className="text-[10px] border-muted-foreground text-muted-foreground">Skipped</Badge>
             )}
           </div>
           <DialogTitle className="text-base">{workout.title}</DialogTitle>
@@ -162,9 +206,7 @@ export function WorkoutDetailModal({
               <div className="rounded bg-muted/40 p-2.5 text-center">
                 <MapPin className="h-3.5 w-3.5 text-muted-foreground mx-auto mb-1" />
                 <p className="text-sm font-semibold">
-                  {workout.targetDistance % 1 === 0
-                    ? workout.targetDistance
-                    : workout.targetDistance.toFixed(1)}
+                  {workout.targetDistance % 1 === 0 ? workout.targetDistance : workout.targetDistance.toFixed(1)}
                 </p>
                 <p className="text-[10px] text-muted-foreground">mi</p>
               </div>
@@ -203,11 +245,9 @@ export function WorkoutDetailModal({
 
           {/* Description */}
           {workout.description && (
-            <div>
-              <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
-                {workout.description}
-              </p>
-            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
+              {workout.description}
+            </p>
           )}
 
           {/* Coach tip */}
@@ -223,6 +263,91 @@ export function WorkoutDetailModal({
             <div className="flex items-start gap-2 rounded border border-red-500/30 bg-red-500/5 p-3">
               <AlertTriangle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
               <p className="text-xs text-red-400 leading-snug">{workout.conflictNote}</p>
+            </div>
+          )}
+
+          {/* Already logged */}
+          {workout.status === "COMPLETED" && (
+            <div className="rounded border border-green-600/20 bg-green-600/5 p-3 space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600/80">Logged</p>
+              <div className="flex gap-4 text-xs text-muted-foreground">
+                {workout.actualDistance != null && <span>{workout.actualDistance.toFixed(1)} mi actual</span>}
+                {workout.actualDuration != null && <span>{workout.actualDuration} min</span>}
+                {workout.perceivedEffort != null && <span>Effort {workout.perceivedEffort}/10</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Log form */}
+          {canLog && !saved && (
+            <div className="rounded border border-border bg-muted/20 p-4 space-y-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Log this workout</p>
+
+              {workout.targetDistance != null && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Actual distance (mi)</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={actualDist}
+                    onChange={e => setActualDist(e.target.value)}
+                    className="h-8 text-sm"
+                    placeholder={String(workout.targetDistance)}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label className="text-xs">Perceived effort (RPE)</Label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {[2, 4, 6, 8, 10].map(v => (
+                    <button
+                      key={v}
+                      onClick={() => setEffort(v)}
+                      className={`rounded py-1.5 text-xs font-semibold transition-colors ${
+                        effort === v
+                          ? "text-background"
+                          : "bg-muted/40 text-muted-foreground hover:bg-muted"
+                      }`}
+                      style={effort === v ? { backgroundColor: accentColor } : {}}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+                {effort != null && (
+                  <p className="text-[10px] text-muted-foreground">{EFFORT_LABELS[effort]}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-xs border-red-500/30 text-muted-foreground hover:text-red-400 hover:border-red-500/60"
+                  onClick={() => logWorkout("SKIPPED")}
+                  disabled={saving}
+                >
+                  <XCircle className="h-3.5 w-3.5" /> Skip
+                </Button>
+                <Button
+                  size="sm"
+                  className="gap-1.5 text-xs text-background"
+                  style={{ backgroundColor: accentColor }}
+                  onClick={() => logWorkout("COMPLETED")}
+                  disabled={saving}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {saving ? "Saving…" : "Completed"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {saved && (
+            <div className="flex items-center justify-center gap-2 py-3 text-green-500 text-sm font-semibold">
+              <CheckCircle2 className="h-4 w-4" /> Logged!
             </div>
           )}
         </div>

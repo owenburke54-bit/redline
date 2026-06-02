@@ -6,6 +6,7 @@ import { z } from "zod";
 const schema = z.object({
   status: z.enum(["SCHEDULED", "COMPLETED", "SKIPPED"]),
   actualDistance: z.number().optional(),
+  actualDuration: z.number().int().optional(),
   perceivedEffort: z.number().min(1).max(10).optional(),
 });
 
@@ -33,6 +34,7 @@ export async function PATCH(
       status: parsed.data.status,
       completedAt: parsed.data.status === "COMPLETED" ? new Date() : null,
       actualDistance: parsed.data.actualDistance ?? null,
+      actualDuration: parsed.data.actualDuration ?? null,
       perceivedEffort: parsed.data.perceivedEffort ?? null,
     },
     select: { status: true },

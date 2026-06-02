@@ -1,11 +1,14 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { daysUntil, formatDate } from "@/lib/utils";
-import { Zap, MessageSquare, ChevronRight } from "lucide-react";
+import { daysUntil, formatDate, getMonday } from "@/lib/utils";
+import { MessageSquare, ChevronRight } from "lucide-react";
+
 import { WhoopSyncButton } from "@/components/whoop/WhoopSyncButton";
 import { WhoopRings } from "@/components/whoop/WhoopRings";
 import { GarminRings } from "@/components/garmin/GarminRings";
 import { GarminSyncButton } from "@/components/garmin/GarminSyncButton";
+import { TodayWorkouts } from "@/components/dashboard/TodayWorkouts";
+import { WeeklyCheckinCard } from "@/components/dashboard/WeeklyCheckinCard";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -67,8 +70,11 @@ export default async function DashboardPage() {
   const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
   const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const weekStart = getMonday(new Date());
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 7);
 
-  const [user, events, todayWorkouts, todayRecovery, recentActivities, todayCycle, todayGarmin] = await Promise.all([
+  const [user, events, todayWorkouts, todayRecovery, recentActivities, todayCycle, todayGarmin, lastCheckin, weekWorkouts] = await Promise.all([
     db.user.findUnique({ where: { id: userId }, select: { id: true, name: true, dedicationScore: true, whoopAccessToken: true, whoopId: true, garminAccessToken: true, garminUserId: true } }),
     db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" }, include: { plan: { select: { id: true } } } }),
     db.workout.findMany({
@@ -97,12 +103,25 @@ export default async function DashboardPage() {
       orderBy: { date: "desc" },
       select: { bodyBattery: true, stressAvg: true, restingHr: true, sleepScore: true, sleepDuration: true, sleepHrv: true, date: true },
     }),
+    db.weeklyCheckin.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
+    db.workout.findMany({
+      where: { userId, scheduledDate: { gte: weekStart, lt: weekEnd } },
+      select: { status: true, type: true },
+    }),
   ]);
 
   if (events.length === 0) redirect("/events");
 
   const whoopConnected = !!(user?.whoopAccessToken && user?.whoopId);
   const garminConnected = !!(user?.garminAccessToken && user?.garminUserId);
+
+  const needsCheckin = !lastCheckin || (Date.now() - lastCheckin.createdAt.getTime()) > 6 * 86400000;
+  const weekScheduledCount = weekWorkouts.filter(w => w.type !== "REST").length;
+  const weekCompletedCount = weekWorkouts.filter(w => w.status === "COMPLETED").length;
 
   const todayStrain = todayCycle?.strain ?? null;
 
@@ -296,56 +315,45 @@ export default async function DashboardPage() {
         </section>
       )}
 
+      {/* Weekly check-in */}
+      {needsCheckin && weekScheduledCount > 0 && (
+        <section>
+          <WeeklyCheckinCard
+            completedCount={weekCompletedCount}
+            plannedCount={weekScheduledCount}
+          />
+        </section>
+      )}
+
       {/* Today's workouts */}
       <section>
         <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-4">
           Today
         </p>
-        {todayWorkouts.length === 0 ? (
-          <p className="text-[13px] text-muted-foreground">
-            No workouts scheduled today.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {todayWorkouts.map((w) => {
-              const isHyrox = w.plan.event.type.startsWith("HYROX");
-              const color = isHyrox ? "var(--hyrox-color)" : "var(--marathon-color)";
-              const completed = w.status === "COMPLETED";
-              return (
-                <div
-                  key={w.id}
-                  className="relative flex items-center gap-4 rounded-xl bg-card px-5 py-4 overflow-hidden"
-                >
-                  <span
-                    className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full"
-                    style={{ backgroundColor: color }}
-                  />
-                  <Zap
-                    className="h-4 w-4 shrink-0 ml-2"
-                    style={{ color }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold truncate">{w.title}</p>
-                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                      {w.plan.event.name}
-                    </p>
-                  </div>
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-wider shrink-0 px-2.5 py-1 rounded-full"
-                    style={{
-                      color: completed ? color : "var(--muted-foreground)",
-                      backgroundColor: completed
-                        ? "rgba(163,230,53,0.1)"
-                        : "rgba(255,255,255,0.04)",
-                    }}
-                  >
-                    {w.status.toLowerCase()}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <TodayWorkouts
+          workouts={todayWorkouts.map(w => ({
+            id: w.id,
+            scheduledDate: w.scheduledDate.toISOString(),
+            type: w.type,
+            title: w.title,
+            description: w.description,
+            targetDistance: w.targetDistance,
+            targetDuration: w.targetDuration,
+            targetPace: w.targetPace,
+            intensityZone: w.intensityZone,
+            isHyroxSim: w.isHyroxSim,
+            status: w.status,
+            actualDistance: w.actualDistance,
+            actualDuration: w.actualDuration,
+            perceivedEffort: w.perceivedEffort,
+            conflictFlag: w.conflictFlag,
+            conflictNote: w.conflictNote,
+            eventType: w.plan.event.type,
+            eventName: w.plan.event.name,
+            goalTime: w.plan.event.goalTime,
+            planId: w.planId,
+          }))}
+        />
       </section>
 
     </div>
