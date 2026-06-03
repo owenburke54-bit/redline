@@ -17,123 +17,193 @@ const schema = z.object({
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// ─── Phase rules for strength generation ─────────────────────────────────────
+// ─── HYROX strength system prompt (full knowledge base) ───────────────────────
 
-function getPhaseRules(phase: string, eventType: string): string {
-  const isRunningOnly =
-    !eventType.startsWith("HYROX") &&
-    !["TRIATHLON_SPRINT","TRIATHLON_OLYMPIC","HALF_IRONMAN","IRONMAN"].includes(eventType);
+const HYROX_STRENGTH_SYSTEM_PROMPT = `You are an elite HYROX-specialist strength coach. You write precise, station-specific workouts. Every exercise must serve a HYROX station or running economy. Do NOT generate generic bodybuilding.
 
-  if (isRunningOnly) {
-    return "Running economy focus: single-leg stability, hip strength, calf resilience. No heavy bilateral lower body within 48h of long run. Upper body and core on easy run days.";
-  }
+THE 8 HYROX STATIONS (memorise these):
+1. SkiErg 1000m — lats, core, shoulders. Lat pulldown strength, breathing under load.
+2. Sled Push 50m — quad/glute dominant. Men Open 102kg, Women Open 72kg. Low position, leg drive.
+3. Sled Pull 50m rope — posterior chain, grip endurance, row strength.
+4. Burpee Broad Jumps 80m — explosive hip extension power.
+5. RowErg 1000m — legs 60%, legs-back-arms sequence.
+6. Farmers Carry 200m — Men 2x24kg, Women 2x16kg. Grip, shoulder packing, anti-lateral flexion.
+7. Sandbag Lunges 100m — Men 20kg, Women 10kg. Late-race leg burner.
+8. Wall Balls 100 reps — Men 9kg/10ft target, Women 6kg/9ft target. Squat-to-press, biggest mental station.
 
-  const lower = phase.toLowerCase();
-  if (lower === "base") {
-    return "Higher rep ranges (12-15), moderate load (RPE 6-7), longer rest (90s), unilateral focus. No heavy barbell work. Exercise selection: Bulgarian split squats, Romanian deadlifts, single-arm KB rows, goblet squats, hip thrusts, plank variations, pallof press. End with 10 min low-intensity carry.";
-  }
-  if (lower === "build") {
-    return "Moderate reps (8-12), higher load (RPE 7-8), shorter rest (60s), circuit-style. Pair movements as supersets. Include at least one HYROX station simulation. Exercise selection: farmers carry progressions, sandbag cleans/squats, box step-ups with load, KB swings, wall ball.";
-  }
-  if (lower === "peak") {
-    return "Lower volume (5-8 reps), race-pace intensity, minimal rest (30s). Full HYROX station circuits at target weight. Timed sled push/pull at race weight, heavy farmers carry at race distance.";
-  }
-  if (lower === "taper") {
-    return "Reduce volume 40%, maintain intensity. Focus on movement quality. No new movements. Race-day prep focus.";
-  }
-  return "Moderate volume and intensity. Focus on movement quality and consistency.";
-}
+KEY PRINCIPLE: Each HYROX station follows a 1km run. Train the "compromised state" — strength on pre-fatigued legs. This is NOT bodybuilding. Every exercise must list which station it targets.
+
+PHASE FRAMEWORK:
+BASE: High reps (12-15), RPE 6-7, 90s rest, movement quality. Two session types — (A) lower/posterior: Goblet Squat 4x12-15 tempo 3-1-1-0, RDL 3x12, Bulgarian Split Squat 3x10 each, Hip Thrust 3x15, Copenhagen Plank 3x20s, Single-leg RDL 3x8. (B) upper/pull: Bent-over Row 4x12, Lat Pulldown 3x10-12, Pallof Press 3x12 each, Dead Bug 3x8, Face Pull 3x15, SkiErg 4x250m easy. Finisher: 10 min easy farmers carry walk. Coaching cues: "chest up, knees tracking" on squats; "hinge at hip, feel hamstring" on RDL; "retract scapula, lead with elbow" on rows; "lat not bicep" on pulldown.
+
+BUILD: Moderate reps (8-12), RPE 7-8, 45-60s rest, supersets required, at least one "compromised state" set (1km run then straight into strength, no rest). Supersets: Sled Push sim 3x20m at race weight + Box Step-up 3x10 each; Trap Bar Deadlift 4x6-8 heavy + Sandbag Squat 3x10 race weight; Farmers Carry 3x50m race weight; Wall Ball 4x25 race weight; Sandbag Lunge 3x20m race weight. Upper: Rope Pull 3x20 + Row 3x10 heavy; Pull-ups + KB Swing 4x15; SkiErg 5x200m race pace; Rower 4x250m. Finisher: 1km run + immediately 30 wall balls (no rest — this IS the training).
+
+PEAK: Race-specific. 30-45s rest between stations. Full circuit: SkiErg 500m → 30s → Sled Push 2x25m → 30s → Sled Pull 2x25m → 30s → Burpees 20 → 30s → Row 500m → 30s → Farmers 100m → 30s → Sandbag Lunge 50m → 30s → Wall Balls 50. Do 2-3 rounds with 3min between. Power session alternative: Trap Bar 4x4 heavy 3min rest; heavy farmers above race weight; heavy sled above race weight; wall ball velocity 4x15.
+
+TAPER: 40% volume reduction, maintain weights, known movements only. One station practice round (all 8 at easy pace, mental rehearsal). One power maintenance (3 lifts x3 sets x4 reps).
+
+MARATHON/RUNNING STRENGTH: Running economy only. No heavy bilateral lower body within 48h of long run. Priority: glute med, hip flexor, calf (single-leg raises 3x20), anti-rotation core. No heavy squats/deadlifts near run days. Mark stationTarget as "Running economy".
+
+MIXED DOUBLES: Both partners do every station. Full-body capacity, not specialisation. Include transition practice notes in sessionCoachNote.
+
+OUTPUT RULES:
+- Return ONLY valid JSON. No markdown fences. No preamble. No explanation after the JSON.
+- sessionCoachNote must be second-person direct coaching voice ("You're in week X of BUILD...").
+- Every exercise MUST have a stationTarget field naming which HYROX station it serves.
+- equipmentNeeded must list only what is actually used.
+- estimatedDuration must be realistic (e.g. "45–55 min").`;
 
 // ─── Strength content generator ───────────────────────────────────────────────
 
-interface StrengthContent {
-  strengthBlocks: unknown;
-  warmup: string;
-  cooldown: string;
-  coachingCues: string;
-}
-
-async function generateStrengthContent(workout: {
+interface StrengthWorkoutInput {
   id: string;
   title: string;
   description: string;
   targetDuration: number | null;
-}, weekNum: number, phase: string, eventType: string): Promise<StrengthContent | null> {
-  const phaseRules = getPhaseRules(phase, eventType);
-
-  const prompt = `You are generating a structured strength workout for a ${eventType} athlete in the ${phase} phase (week ${weekNum}).
-
-SESSION CONTEXT: ${workout.title} — ${workout.description}
-TARGET DURATION: ${workout.targetDuration ?? 45} minutes
-
-Return ONLY valid JSON (no markdown, no explanation):
-{
-  "warmup": "5-8 min explicit warmup description",
-  "coachingCues": "1-2 sentence coaching focus for this session",
-  "strengthBlocks": [
-    {
-      "exercise": "Exercise name",
-      "sets": 3,
-      "reps": "10-12",
-      "load": "load guidance string",
-      "tempo": "3-1-1-0",
-      "rest": "90s",
-      "cue": "one sentence focus cue"
-    }
-  ],
-  "cooldown": "5 min explicit cooldown description"
+  week: number;
+  phase: string;
+  weekInPhase?: number;
+  totalPlanWeeks?: number;
+  siblingWorkouts?: string; // titles of other workouts same week
 }
 
-PHASE RULES:
-${phaseRules}
+async function generateStrengthContent(
+  workout: StrengthWorkoutInput,
+  eventType: string,
+  gender?: string | null,
+  isMixedDoubles?: boolean,
+): Promise<unknown | null> {
+  const isHyrox = eventType.startsWith("HYROX");
+  const isMarathon = ["MARATHON", "HALF_MARATHON", "FIVE_K", "TEN_K", "ULTRA_50K", "ULTRA_50M"].includes(eventType);
 
-The strengthBlocks array must have 3-5 exercises with ALL fields populated.`;
+  const genderNote = gender
+    ? `Athlete gender: ${gender}. Use gender-specific HYROX weights where applicable.`
+    : "Athlete gender unknown — list both Men/Women weights (e.g. 'Men 102kg / Women 72kg') for weighted stations.";
+
+  const mixedNote = isMixedDoubles
+    ? "EVENT FORMAT: Mixed Doubles — both partners complete every station. Emphasise full-body capacity, not specialisation. Include transition notes in sessionCoachNote."
+    : "";
+
+  const userPrompt = `Generate a structured strength workout as JSON only.
+
+ATHLETE CONTEXT:
+- Event: ${eventType}${isMixedDoubles ? " (Mixed Doubles)" : ""}
+- Phase: ${workout.phase.toUpperCase()}
+- Week ${workout.week} of plan${workout.totalPlanWeeks ? ` (${workout.totalPlanWeeks} total weeks)` : ""}
+${workout.weekInPhase ? `- Week ${workout.weekInPhase} within this phase` : ""}
+- ${genderNote}
+${mixedNote}
+${workout.siblingWorkouts ? `- Other workouts this week (avoid conflicting leg emphasis): ${workout.siblingWorkouts}` : ""}
+
+SESSION:
+- Title: ${workout.title}
+- Description: ${workout.description}
+- Target duration: ${workout.targetDuration ?? 45} minutes
+- Sport context: ${isHyrox ? "HYROX — every exercise must serve one of the 8 stations or run prep" : isMarathon ? "Marathon/Running — running economy only" : "General fitness"}
+
+Return ONLY this JSON structure (no markdown, no text before or after):
+{
+  "sessionName": "descriptive session name",
+  "phaseContext": "one sentence on where this fits in the training arc",
+  "estimatedDuration": "X–Y min",
+  "equipmentNeeded": ["item1", "item2"],
+  "sessionCoachNote": "2-3 sentence direct second-person coaching note",
+  "warmup": "explicit 5-8 min warmup description",
+  "blocks": [
+    {
+      "blockLabel": "block name (e.g. Lower Power, Station Simulation)",
+      "exercises": [
+        {
+          "exercise": "Exercise name",
+          "sets": 4,
+          "reps": "6-8",
+          "load": "load guidance",
+          "tempo": "3-1-1-0",
+          "rest": "60s",
+          "stationTarget": "which HYROX station this serves (e.g. Sled Push, Wall Balls, Running economy)",
+          "coachingCue": "one sentence focus cue"
+        }
+      ]
+    }
+  ],
+  "finisher": "finisher description or null",
+  "cooldown": "5 min cooldown description"
+}`;
 
   try {
     const message = await anthropic.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 1024,
-      messages: [{ role: "user", content: prompt }],
+      max_tokens: 2048,
+      system: HYROX_STRENGTH_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userPrompt }],
     });
 
     const text = message.content[0].type === "text" ? message.content[0].text : "";
     const parsed = parseClaudeJson(text) as Record<string, unknown> | null;
-    if (!parsed || !Array.isArray(parsed.strengthBlocks)) return null;
-
-    return {
-      strengthBlocks: parsed.strengthBlocks,
-      warmup: typeof parsed.warmup === "string" ? parsed.warmup : "",
-      cooldown: typeof parsed.cooldown === "string" ? parsed.cooldown : "",
-      coachingCues: typeof parsed.coachingCues === "string" ? parsed.coachingCues : "",
-    };
+    if (!parsed || !Array.isArray(parsed.blocks)) return null;
+    return parsed;
   } catch (err) {
     console.error(`Strength generation failed for workout ${workout.id}:`, err);
     return null;
   }
 }
 
-// ─── Post-insert: parallel strength generation (fire-and-forget) ──────────────
+// ─── Post-insert: enrichStrengthWorkouts (batched, fire-and-forget) ───────────
 
 async function enrichStrengthWorkouts(
   planId: string,
-  strengthWorkouts: Array<{ id: string; title: string; description: string; targetDuration: number | null; week: number; phase: string }>,
-  eventType: string
+  strengthWorkouts: Array<StrengthWorkoutInput>,
+  eventType: string,
+  gender?: string | null,
 ): Promise<void> {
-  await Promise.all(
-    strengthWorkouts.map(async (w) => {
-      const content = await generateStrengthContent(w, w.week, w.phase, eventType);
-      if (!content) return;
-      await db.workout.update({
-        where: { id: w.id },
-        data: {
-          strengthBlocks: content.strengthBlocks as object,
-          warmup: content.warmup || null,
-          cooldown: content.cooldown || null,
-          coachingCues: content.coachingCues || null,
-        },
-      });
-    })
-  );
+  const isMixedDoubles =
+    eventType.includes("MIXED") ||
+    strengthWorkouts[0]?.title?.toLowerCase().includes("mixed");
+
+  // Build a week→sibling titles map so we can pass sibling context to Claude
+  const weekTitles = new Map<number, string[]>();
+  for (const w of strengthWorkouts) {
+    const arr = weekTitles.get(w.week) ?? [];
+    arr.push(w.title);
+    weekTitles.set(w.week, arr);
+  }
+
+  // Batch of 5 with 1s delay between batches
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < strengthWorkouts.length; i += BATCH_SIZE) {
+    if (i > 0) await new Promise(r => setTimeout(r, 1000));
+    const batch = strengthWorkouts.slice(i, i + BATCH_SIZE);
+
+    await Promise.all(
+      batch.map(async (w) => {
+        const siblings = (weekTitles.get(w.week) ?? []).filter(t => t !== w.title);
+        const enriched = await generateStrengthContent(
+          { ...w, siblingWorkouts: siblings.length ? siblings.join(", ") : undefined },
+          eventType,
+          gender,
+          isMixedDoubles,
+        );
+        if (!enriched) return;
+
+        // Extract top-level fields for backward compat columns
+        const parsed = enriched as Record<string, unknown>;
+        const warmup = typeof parsed.warmup === "string" ? parsed.warmup : null;
+        const cooldown = typeof parsed.cooldown === "string" ? parsed.cooldown : null;
+        const coachingCues = typeof parsed.sessionCoachNote === "string" ? parsed.sessionCoachNote : null;
+
+        await db.workout.update({
+          where: { id: w.id },
+          data: {
+            strengthBlocks: enriched as object,
+            warmup: warmup || null,
+            cooldown: cooldown || null,
+            coachingCues: coachingCues || null,
+          },
+        });
+      })
+    );
+  }
+
   console.log(`[plans/generate] Enriched ${strengthWorkouts.length} strength workouts for plan ${planId}`);
 }
 
@@ -377,6 +447,18 @@ export async function POST(req: NextRequest) {
   const strengthTemplateWorkouts = filteredWorkouts.filter(w => strengthTypes.has(w.type));
 
   if (strengthTemplateWorkouts.length > 0) {
+    // Compute weekInPhase for each strength workout
+    const phaseWeekCounters = new Map<string, number>();
+    // Sort by week so counter increments in order
+    const sortedStrength = [...strengthTemplateWorkouts].sort((a, b) => a.week - b.week);
+    const weekInPhaseMap = new Map<string, number>(); // key: `${phase}-${week}`
+    for (const w of sortedStrength) {
+      const phaseKey = (w.phase ?? "base").toLowerCase();
+      const count = (phaseWeekCounters.get(phaseKey) ?? 0) + 1;
+      phaseWeekCounters.set(phaseKey, count);
+      weekInPhaseMap.set(`${phaseKey}-${w.week}`, count);
+    }
+
     // Fetch IDs for the newly created strength workouts
     db.workout.findMany({
       where: {
@@ -390,16 +472,22 @@ export async function POST(req: NextRequest) {
         const match = strengthTemplateWorkouts.find(
           tw => tw.title === dbW.title && new Date(tw.scheduledDate).toISOString().split("T")[0] === dbW.scheduledDate.toISOString().split("T")[0]
         );
+        const phase = match?.phase ?? "Base";
+        const week = match?.week ?? 1;
+        const phaseKey = phase.toLowerCase();
         return {
           id: dbW.id,
           title: dbW.title,
           description: dbW.description,
           targetDuration: dbW.targetDuration,
-          week: match?.week ?? 1,
-          phase: match?.phase ?? "Base",
+          week,
+          phase,
+          weekInPhase: weekInPhaseMap.get(`${phaseKey}-${week}`),
+          totalPlanWeeks: builtPlan.totalWeeks,
         };
       });
-      return enrichStrengthWorkouts(plan.id, enrichList, event.type);
+      // gender from AthleteProfile — no gender field in schema, pass null
+      return enrichStrengthWorkouts(plan.id, enrichList, event.type, null);
     }).catch(err => {
       console.error("[plans/generate] Strength enrichment failed:", err);
     });

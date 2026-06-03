@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, Check } from "lucide-react";
+import { X, Check, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { WorkoutRowData } from "@/components/plan/WeekRow";
@@ -9,19 +9,39 @@ import { ZONE_LABELS } from "@/components/plan/WeekRow";
 
 // ─── Type definitions ─────────────────────────────────────────────────────────
 
-interface StrengthBlock {
+// New rich exercise schema
+interface StrengthExercise {
   exercise: string;
   sets: number;
   reps: string;
   load: string;
   tempo: string;
   rest: string;
-  cue: string;
+  stationTarget: string;
+  coachingCue: string;
+}
+
+interface StrengthBlock {
+  blockLabel: string;
+  exercises: StrengthExercise[];
+}
+
+// New top-level strengthBlocks shape stored in DB
+interface StrengthSession {
+  sessionName?: string;
+  phaseContext?: string;
+  estimatedDuration?: string;
+  equipmentNeeded?: string[];
+  sessionCoachNote?: string;
+  warmup?: string;
+  blocks?: StrengthBlock[];
+  finisher?: string | null;
+  cooldown?: string;
 }
 
 // WorkoutRowData extended with rich strength fields (nullable — old workouts won't have them)
 export interface WorkoutDetailData extends WorkoutRowData {
-  strengthBlocks?: StrengthBlock[] | null;
+  strengthBlocks?: StrengthSession | null;
   warmup?: string | null;
   cooldown?: string | null;
   coachingCues?: string | null;
@@ -89,77 +109,148 @@ function CollapsibleSection({ label, children }: { label: string; children: Reac
 
 // ─── Strength blocks renderer ─────────────────────────────────────────────────
 
-function StrengthBlockList({
-  blocks,
-  warmup,
-  cooldown,
-  coachingCues,
-}: {
-  blocks: StrengthBlock[];
-  warmup?: string | null;
-  cooldown?: string | null;
-  coachingCues?: string | null;
-}) {
+function StrengthSessionView({ session }: { session: StrengthSession }) {
+  const blocks = session.blocks ?? [];
+  const warmup = session.warmup;
+  const cooldown = session.cooldown;
+  const coachNote = session.sessionCoachNote;
+  const finisher = session.finisher;
+  const equipment = session.equipmentNeeded ?? [];
+
   return (
     <div className="space-y-3">
-      {coachingCues && (
-        <p
-          className="text-[13px] font-semibold leading-snug"
-          style={{ color: "#FF5500" }}
-        >
-          {coachingCues}
-        </p>
+      {/* Coach note — prominent, orange, italic */}
+      {coachNote && (
+        <div className="rounded-lg px-3 py-2.5" style={{ background: "rgba(255,85,0,0.08)", border: "1px solid rgba(255,85,0,0.2)" }}>
+          <p className="text-[9px] font-bold uppercase tracking-wider mb-1" style={{ color: "rgba(255,85,0,0.6)" }}>
+            Coach note
+          </p>
+          <p className="text-[13px] italic leading-snug" style={{ color: "#FF5500" }}>
+            {coachNote}
+          </p>
+        </div>
       )}
 
+      {/* Duration pill */}
+      {session.estimatedDuration && (
+        <span
+          className="inline-block text-[10px] font-semibold px-2.5 py-1 rounded-full"
+          style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
+        >
+          {session.estimatedDuration}
+        </span>
+      )}
+
+      {/* Warm-up collapsible */}
       {warmup && <CollapsibleSection label="Warm-up">{warmup}</CollapsibleSection>}
 
-      <div className="space-y-2">
-        {blocks.map((block, i) => (
-          <div
-            key={i}
-            className="rounded-lg px-3 py-2.5 space-y-1"
-            style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)" }}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-[13px] font-bold leading-snug">{block.exercise}</p>
-              <span
-                className="shrink-0 text-[11px] font-bold tabular-nums px-2 py-0.5 rounded"
-                style={{ background: "rgba(168,85,247,0.2)", color: "#A855F7" }}
-              >
-                {block.sets}×{block.reps}
-              </span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              {block.load && (
-                <span className="text-[11px] text-muted-foreground/60">{block.load}</span>
-              )}
-              {block.tempo && (
+      {/* Blocks */}
+      {blocks.map((block, bi) => (
+        <div key={bi} className="space-y-2">
+          {block.blockLabel && (
+            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>
+              {block.blockLabel}
+            </p>
+          )}
+          {(block.exercises ?? []).map((ex, ei) => (
+            <div
+              key={ei}
+              className="rounded-lg px-3 py-2.5 space-y-1.5"
+              style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)" }}
+            >
+              {/* Exercise name + sets×reps badge */}
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-[15px] font-bold leading-snug">{ex.exercise}</p>
                 <span
-                  className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-                  style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" }}
+                  className="shrink-0 text-[11px] font-bold tabular-nums px-2 py-0.5 rounded"
+                  style={{ background: "rgba(255,85,0,0.2)", color: "#FF5500" }}
                 >
-                  {block.tempo}
+                  {ex.sets}×{ex.reps}
+                </span>
+              </div>
+
+              {/* Load */}
+              {ex.load && (
+                <p className="text-[12px] text-muted-foreground/60">{ex.load}</p>
+              )}
+
+              {/* Tempo + rest pills */}
+              <div className="flex flex-wrap gap-1.5">
+                {ex.tempo && (
+                  <span
+                    className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                    style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)" }}
+                  >
+                    {ex.tempo}
+                  </span>
+                )}
+                {ex.rest && (
+                  <span
+                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}
+                  >
+                    rest {ex.rest}
+                  </span>
+                )}
+              </div>
+
+              {/* Station target badge */}
+              {ex.stationTarget && (
+                <span
+                  className="inline-block text-[10px] font-bold px-2 py-0.5 rounded"
+                  style={{ background: "rgba(0,232,122,0.12)", color: "#00E87A", border: "1px solid rgba(0,232,122,0.25)" }}
+                >
+                  → {ex.stationTarget}
                 </span>
               )}
-              {block.rest && (
-                <span
-                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                  style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}
-                >
-                  rest {block.rest}
-                </span>
+
+              {/* Coaching cue */}
+              {ex.coachingCue && (
+                <p className="text-[12px] text-muted-foreground/50 italic leading-snug">{ex.coachingCue}</p>
               )}
             </div>
+          ))}
+        </div>
+      ))}
 
-            {block.cue && (
-              <p className="text-[11px] text-muted-foreground/50 italic leading-snug">{block.cue}</p>
-            )}
+      {/* Finisher */}
+      {finisher && (
+        <div
+          className="rounded-lg px-3 py-2.5"
+          style={{ background: "rgba(255,85,0,0.06)", border: "1px solid rgba(255,85,0,0.2)" }}
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <Zap className="h-3 w-3" style={{ color: "#FF5500" }} />
+            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "rgba(255,85,0,0.7)" }}>
+              Finisher
+            </p>
           </div>
-        ))}
-      </div>
+          <p className="text-[12px] text-muted-foreground/70 leading-relaxed">{finisher}</p>
+        </div>
+      )}
 
+      {/* Cool-down collapsible */}
       {cooldown && <CollapsibleSection label="Cool-down">{cooldown}</CollapsibleSection>}
+
+      {/* Equipment pills */}
+      {equipment.length > 0 && (
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "rgba(255,255,255,0.25)" }}>
+            You&apos;ll need
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {equipment.map((item, i) => (
+              <span
+                key={i}
+                className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.1)" }}
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -233,9 +324,12 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
   if (!workout) return null;
 
   const s = WORKOUT_STYLE[workout.type] ?? WORKOUT_STYLE.REST;
+  const rawStrength = (workout as WorkoutDetailData).strengthBlocks as StrengthSession | null | undefined;
   const hasStrengthBlocks =
-    Array.isArray((workout as WorkoutDetailData).strengthBlocks) &&
-    ((workout as WorkoutDetailData).strengthBlocks?.length ?? 0) > 0;
+    rawStrength != null &&
+    typeof rawStrength === "object" &&
+    Array.isArray((rawStrength as StrengthSession).blocks) &&
+    ((rawStrength as StrengthSession).blocks?.length ?? 0) > 0;
 
   const formattedDate = workout.scheduledDate
     ? (() => {
@@ -367,12 +461,7 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
 
             {/* Description / Strength blocks */}
             {hasStrengthBlocks ? (
-              <StrengthBlockList
-                blocks={(workout as WorkoutDetailData).strengthBlocks!}
-                warmup={(workout as WorkoutDetailData).warmup}
-                cooldown={(workout as WorkoutDetailData).cooldown}
-                coachingCues={(workout as WorkoutDetailData).coachingCues}
-              />
+              <StrengthSessionView session={rawStrength as StrengthSession} />
             ) : (
               <div>
                 {(workout as WorkoutDetailData).coachingCues && (
