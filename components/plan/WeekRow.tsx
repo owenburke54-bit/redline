@@ -35,16 +35,16 @@ export type WeekRowData = {
 };
 
 const WORKOUT_STYLE: Record<string, { bg: string; border: string; text: string; short: string }> = {
-  EASY_RUN:            { bg: "rgba(99,102,241,0.18)",  border: "rgba(99,102,241,0.5)",  text: "#818cf8", short: "E"   },
-  LONG_RUN:            { bg: "rgba(249,115,22,0.2)",   border: "rgba(249,115,22,0.5)",  text: "#fb923c", short: "L"   },
-  TEMPO:               { bg: "rgba(234,179,8,0.2)",    border: "rgba(234,179,8,0.5)",   text: "#fbbf24", short: "T"   },
-  INTERVALS:           { bg: "rgba(239,68,68,0.2)",    border: "rgba(239,68,68,0.5)",   text: "#f87171", short: "I"   },
-  HYROX_STATION_WORK:  { bg: "rgba(34,197,94,0.18)",   border: "rgba(34,197,94,0.5)",   text: "#4ade80", short: "HX"  },
-  HYROX_SIM:           { bg: "rgba(34,197,94,0.35)",   border: "rgba(34,197,94,0.8)",   text: "#22c55e", short: "SIM" },
-  STRENGTH:            { bg: "rgba(168,85,247,0.18)",  border: "rgba(168,85,247,0.5)",  text: "#c084fc", short: "STR" },
-  CROSS_TRAIN:         { bg: "rgba(20,184,166,0.18)",  border: "rgba(20,184,166,0.5)",  text: "#2dd4bf", short: "XT"  },
-  REST:                { bg: "rgba(255,255,255,0.02)", border: "rgba(255,255,255,0.06)", text: "rgba(255,255,255,0.15)", short: "—"  },
-  RACE:                { bg: "rgba(255,255,255,0.12)", border: "rgba(255,255,255,0.4)",  text: "#ffffff",  short: "RACE"},
+  EASY_RUN:            { bg: "rgba(74,158,255,0.15)",  border: "rgba(74,158,255,0.4)",  text: "#4A9EFF", short: "E"   },
+  LONG_RUN:            { bg: "rgba(255,184,0,0.15)",   border: "rgba(255,184,0,0.4)",   text: "#FFB800", short: "L"   },
+  TEMPO:               { bg: "rgba(255,85,0,0.15)",    border: "rgba(255,85,0,0.4)",    text: "#FF5500", short: "T"   },
+  INTERVALS:           { bg: "rgba(255,45,45,0.15)",   border: "rgba(255,45,45,0.4)",   text: "#FF2D2D", short: "I"   },
+  HYROX_STATION_WORK:  { bg: "rgba(0,232,122,0.12)",   border: "rgba(0,232,122,0.4)",   text: "#00E87A", short: "HX"  },
+  HYROX_SIM:           { bg: "rgba(0,232,122,0.25)",   border: "rgba(0,232,122,0.7)",   text: "#00E87A", short: "SIM" },
+  STRENGTH:            { bg: "rgba(168,85,247,0.15)",  border: "rgba(168,85,247,0.4)",  text: "#A855F7", short: "STR" },
+  CROSS_TRAIN:         { bg: "rgba(45,212,191,0.15)",  border: "rgba(45,212,191,0.4)",  text: "#2dd4bf", short: "XT"  },
+  REST:                { bg: "rgba(85,85,85,0.1)",     border: "rgba(85,85,85,0.3)",    text: "#555555", short: "REST"},
+  RACE:                { bg: "rgba(255,255,255,0.08)", border: "rgba(255,255,255,0.3)", text: "#F5F5F5", short: "RACE"},
 };
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -84,16 +84,16 @@ function WorkoutDayBlock({ workout }: { workout: WorkoutRowData | undefined }) {
       style={{ background: s.bg, border: `1px solid ${s.border}` }}
     >
       {isCompleted && (
-        <div className="absolute inset-0 rounded-lg" style={{ background: "rgba(34,197,94,0.08)" }} />
+        <div className="absolute inset-0 rounded-lg" style={{ background: "rgba(0,232,122,0.08)" }} />
       )}
       {isSkipped && (
-        <div className="absolute inset-0 rounded-lg" style={{ background: "rgba(239,68,68,0.08)" }} />
+        <div className="absolute inset-0 rounded-lg" style={{ background: "rgba(255,45,45,0.08)" }} />
       )}
       <span className="text-[10px] font-bold tabular-nums relative z-10 leading-none" style={{ color: s.text }}>
         {label}
       </span>
       {isCompleted && (
-        <span className="text-[8px] mt-0.5 relative z-10" style={{ color: "#22c55e" }}>✓</span>
+        <span className="text-[8px] mt-0.5 relative z-10" style={{ color: "#00E87A" }}>✓</span>
       )}
     </div>
   );
@@ -153,7 +153,7 @@ function WorkoutStatusButtons({
         onClick={() => patch("SCHEDULED")}
         disabled={loading}
         className="inline-flex items-center gap-1.5 px-3 py-2.5 md:px-2 md:py-1 rounded text-[10px] font-bold transition-colors"
-        style={{ color: "#22c55e", background: "rgba(34,197,94,0.1)" }}
+        style={{ color: "#00E87A", background: "rgba(0,232,122,0.1)" }}
         title="Mark as not done"
       >
         <Check className="h-3 w-3" /> Done
@@ -166,7 +166,7 @@ function WorkoutStatusButtons({
         onClick={() => patch("SCHEDULED")}
         disabled={loading}
         className="inline-flex items-center gap-1.5 px-3 py-2.5 md:px-2 md:py-1 rounded text-[10px] font-bold transition-colors"
-        style={{ color: "#ef4444", background: "rgba(239,68,68,0.1)" }}
+        style={{ color: "#FF2D2D", background: "rgba(255,45,45,0.1)" }}
         title="Mark as not skipped"
       >
         <X className="h-3 w-3" /> Skipped
@@ -325,7 +325,7 @@ export function WeekRow({
               </span>
             ) : week.isPast && completionPct !== null ? (
               <span className="text-[10px] font-bold tabular-nums"
-                style={{ color: completionPct >= 80 ? "#22c55e" : completionPct >= 50 ? "#f59e0b" : "#ef4444" }}>
+                style={{ color: completionPct >= 80 ? "#00E87A" : completionPct >= 50 ? "#FFB800" : "#FF2D2D" }}>
                 {completionPct}%
               </span>
             ) : null}
@@ -372,7 +372,7 @@ export function WeekRow({
                       <span className="text-[9px] font-semibold text-muted-foreground/40 w-6 mt-1 shrink-0 uppercase">
                         {DAY_LABELS[w.dayOfWeek]}
                       </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold shrink-0 mt-0.5"
+                      <span className="inline-flex items-center text-[10px] font-bold tracking-[0.08em] uppercase rounded-[6px] px-2 py-0.5 shrink-0 mt-0.5"
                         style={{ background: s.bg, color: s.text, border: `1px solid ${s.border}` }}>
                         {TYPE_LABELS[w.type] ?? w.type}
                       </span>
@@ -380,7 +380,7 @@ export function WeekRow({
                         <p className="text-[12px] font-semibold leading-tight">{w.title}</p>
                         {/* Desktop: show coachingCues if present, above description */}
                         {wDetail.coachingCues && (
-                          <p className="hidden md:block text-[11px] font-semibold mt-0.5 leading-snug" style={{ color: "#fb923c" }}>
+                          <p className="hidden md:block text-[11px] font-semibold mt-0.5 leading-snug" style={{ color: "#FF5500" }}>
                             {wDetail.coachingCues}
                           </p>
                         )}

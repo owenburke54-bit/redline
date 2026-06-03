@@ -32,16 +32,16 @@ export interface WorkoutDetailData extends WorkoutRowData {
 // ─── Style maps (mirrored from WeekRow) ───────────────────────────────────────
 
 const WORKOUT_STYLE: Record<string, { bg: string; border: string; text: string }> = {
-  EASY_RUN:           { bg: "rgba(99,102,241,0.18)",  border: "rgba(99,102,241,0.5)",  text: "#818cf8" },
-  LONG_RUN:           { bg: "rgba(249,115,22,0.2)",   border: "rgba(249,115,22,0.5)",  text: "#fb923c" },
-  TEMPO:              { bg: "rgba(234,179,8,0.2)",    border: "rgba(234,179,8,0.5)",   text: "#fbbf24" },
-  INTERVALS:          { bg: "rgba(239,68,68,0.2)",    border: "rgba(239,68,68,0.5)",   text: "#f87171" },
-  HYROX_STATION_WORK: { bg: "rgba(34,197,94,0.18)",   border: "rgba(34,197,94,0.5)",   text: "#4ade80" },
-  HYROX_SIM:          { bg: "rgba(34,197,94,0.35)",   border: "rgba(34,197,94,0.8)",   text: "#22c55e" },
-  STRENGTH:           { bg: "rgba(168,85,247,0.18)",  border: "rgba(168,85,247,0.5)",  text: "#c084fc" },
-  CROSS_TRAIN:        { bg: "rgba(20,184,166,0.18)",  border: "rgba(20,184,166,0.5)",  text: "#2dd4bf" },
-  REST:               { bg: "rgba(255,255,255,0.02)", border: "rgba(255,255,255,0.06)", text: "rgba(255,255,255,0.15)" },
-  RACE:               { bg: "rgba(255,255,255,0.12)", border: "rgba(255,255,255,0.4)", text: "#ffffff" },
+  EASY_RUN:           { bg: "rgba(74,158,255,0.15)",  border: "rgba(74,158,255,0.4)",  text: "#4A9EFF" },
+  LONG_RUN:           { bg: "rgba(255,184,0,0.15)",   border: "rgba(255,184,0,0.4)",   text: "#FFB800" },
+  TEMPO:              { bg: "rgba(255,85,0,0.15)",    border: "rgba(255,85,0,0.4)",    text: "#FF5500" },
+  INTERVALS:          { bg: "rgba(255,45,45,0.15)",   border: "rgba(255,45,45,0.4)",   text: "#FF2D2D" },
+  HYROX_STATION_WORK: { bg: "rgba(0,232,122,0.12)",   border: "rgba(0,232,122,0.4)",   text: "#00E87A" },
+  HYROX_SIM:          { bg: "rgba(0,232,122,0.25)",   border: "rgba(0,232,122,0.7)",   text: "#00E87A" },
+  STRENGTH:           { bg: "rgba(168,85,247,0.15)",  border: "rgba(168,85,247,0.4)",  text: "#A855F7" },
+  CROSS_TRAIN:        { bg: "rgba(45,212,191,0.15)",  border: "rgba(45,212,191,0.4)",  text: "#2dd4bf" },
+  REST:               { bg: "rgba(85,85,85,0.1)",     border: "rgba(85,85,85,0.3)",    text: "#555555" },
+  RACE:               { bg: "rgba(255,255,255,0.08)", border: "rgba(255,255,255,0.3)", text: "#F5F5F5" },
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -51,8 +51,8 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const STATUS_OPTIONS = [
-  { value: "COMPLETED", label: "Completed", color: "#22c55e" },
-  { value: "SKIPPED",   label: "Skipped",   color: "#ef4444" },
+  { value: "COMPLETED", label: "Completed", color: "#00E87A" },
+  { value: "SKIPPED",   label: "Skipped",   color: "#FF2D2D" },
   { value: "SCHEDULED", label: "Scheduled", color: "rgba(255,255,255,0.5)" },
 ] as const;
 
@@ -105,7 +105,7 @@ function StrengthBlockList({
       {coachingCues && (
         <p
           className="text-[13px] font-semibold leading-snug"
-          style={{ color: "#fb923c" }}
+          style={{ color: "#FF5500" }}
         >
           {coachingCues}
         </p>
@@ -124,7 +124,7 @@ function StrengthBlockList({
               <p className="text-[13px] font-bold leading-snug">{block.exercise}</p>
               <span
                 className="shrink-0 text-[11px] font-bold tabular-nums px-2 py-0.5 rounded"
-                style={{ background: "rgba(168,85,247,0.2)", color: "#c084fc" }}
+                style={{ background: "rgba(168,85,247,0.2)", color: "#A855F7" }}
               >
                 {block.sets}×{block.reps}
               </span>
@@ -263,7 +263,7 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
 
         {/* Sheet */}
         <div
-          className="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl overflow-hidden"
+          className="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl overflow-hidden animate-sheet-up"
           style={{
             background: "hsl(var(--card))",
             border: "1px solid rgba(255,255,255,0.1)",
@@ -295,7 +295,7 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
                 {workout.status === "COMPLETED" && (
                   <span
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold"
-                    style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e" }}
+                    style={{ background: "rgba(0,232,122,0.15)", color: "#00E87A" }}
                   >
                     <Check className="h-2.5 w-2.5" /> Done
                   </span>
@@ -303,7 +303,7 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
                 {workout.status === "SKIPPED" && (
                   <span
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold"
-                    style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444" }}
+                    style={{ background: "rgba(255,45,45,0.15)", color: "#FF2D2D" }}
                   >
                     Skipped
                   </span>
@@ -378,7 +378,7 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
                 {(workout as WorkoutDetailData).coachingCues && (
                   <p
                     className="text-[13px] font-semibold leading-snug mb-3"
-                    style={{ color: "#fb923c" }}
+                    style={{ color: "#FF5500" }}
                   >
                     {(workout as WorkoutDetailData).coachingCues}
                   </p>
@@ -464,9 +464,9 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
                 </label>
                 <div className="flex gap-2">
                   {[
-                    { value: "TOO_EASY", label: "Too easy", color: "#60a5fa" },
-                    { value: "ABOUT_RIGHT", label: "About right", color: "#4ade80" },
-                    { value: "TOO_HARD", label: "Too hard", color: "#f87171" },
+                    { value: "TOO_EASY", label: "Too easy", color: "#4A9EFF" },
+                    { value: "ABOUT_RIGHT", label: "About right", color: "#00E87A" },
+                    { value: "TOO_HARD", label: "Too hard", color: "#FF2D2D" },
                   ].map(opt => {
                     const active = perceivedDifficulty === opt.value;
                     return (
@@ -498,7 +498,7 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
               onClick={save}
               disabled={saving}
               className="w-full py-3.5 rounded-xl text-[13px] font-bold transition-opacity disabled:opacity-50"
-              style={{ background: "#fb923c", color: "#000" }}
+              style={{ background: "#FF5500", color: "#080808" }}
             >
               {saving ? "Saving…" : "Save"}
             </button>

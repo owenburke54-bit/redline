@@ -24,10 +24,9 @@ export function CoachNudgeCard({ prompt, subtext }: CoachNudgeCardProps) {
       <div className="flex items-start gap-4">
         <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
           <Zap className="h-4 w-4 text-primary" />
-          <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
-          </span>
+          <span
+            className="absolute -top-1 -right-1 inline-flex rounded-full h-2.5 w-2.5 bg-primary animate-pulse-dot"
+          />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[9px] font-semibold tracking-[0.18em] text-muted-foreground/40 uppercase mb-1.5">

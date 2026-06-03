@@ -15,25 +15,25 @@ const PRESET_STUDIOS: { id: string; name: string; tagline: string; color: string
     id: "barrys",
     name: "Barry's",
     tagline: "Treadmill intervals + functional floor work. Counts as a hard run day.",
-    color: "#ef4444",
+    color: "#FF2D2D",
   },
   {
     id: "orangetheory",
     name: "OrangeTheory",
     tagline: "Treadmill, rowing, and floor. Rowing transfers directly to HYROX.",
-    color: "#f97316",
+    color: "#FF5500",
   },
   {
     id: "orangetheory_hyrox",
     name: "OTF HYROX",
     tagline: "OrangeTheory's HYROX-specific programming. Replaces planned station work.",
-    color: "#f97316",
+    color: "#FF5500",
   },
   {
     id: "backyard_boston",
     name: "Backyard Boston",
     tagline: "HYROX functional fitness classes. Directly supplements your HYROX plan.",
-    color: "#22c55e",
+    color: "#00E87A",
   },
 ];
 
@@ -102,7 +102,7 @@ export function ClassScheduleCard({ initial }: { initial: ClassSchedule | null }
 
   return (
     <div className="rounded-xl bg-card overflow-hidden">
-      <div className="h-[3px]" style={{ background: "linear-gradient(to right, #f97316, #22c55e)" }} />
+      <div className="h-[3px]" style={{ background: "linear-gradient(to right, #FF5500, #00E87A)" }} />
       <div className="p-5">
         <p className="text-[9px] font-semibold tracking-[0.18em] text-muted-foreground/40 uppercase mb-1">Studio Classes</p>
         <p className="text-[11px] text-muted-foreground/60 mb-5">

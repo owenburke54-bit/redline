@@ -123,7 +123,7 @@ export function EventCard({ event }: EventCardProps) {
   return (
     <>
     <div
-      className={cn("rounded-xl bg-card overflow-hidden", event.hasPlan && "cursor-pointer")}
+      className={cn("card-base overflow-hidden", event.hasPlan && "cursor-pointer")}
       onClick={() => { if (event.hasPlan && event.planId) router.push(`/plan/${event.planId}`); }}
     >
       <div className="h-[3px]" style={{ backgroundColor: accentColor }} />
@@ -163,7 +163,13 @@ export function EventCard({ event }: EventCardProps) {
           </div>
 
           <div className="text-right shrink-0">
-            <p className="text-[2.5rem] font-black tabular-nums leading-none" style={{ color: accentColor }}>
+            <p
+              className="text-[2.5rem] font-black tabular-nums leading-none animate-count-in"
+              style={{
+                color: accentColor,
+                textShadow: `0 0 20px color-mix(in srgb, ${accentColor} 40%, transparent)`,
+              }}
+            >
               {event.daysOut}
             </p>
             <p className="text-[9px] font-semibold tracking-[0.15em] text-muted-foreground/40 uppercase mt-1">days</p>

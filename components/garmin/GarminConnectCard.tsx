@@ -29,10 +29,10 @@ export function GarminConnectCard({
     bodyBattery == null
       ? "var(--muted-foreground)"
       : bodyBattery >= 70
-      ? "#22c55e"
-      : bodyBattery >= 40
-      ? "#f59e0b"
-      : "#ef4444";
+      ? "#00E87A"
+      : bodyBattery >= 50
+      ? "#FFB800"
+      : "#FF2D2D";
 
   return (
     <div className="rounded border border-border bg-card p-4">

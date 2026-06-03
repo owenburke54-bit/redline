@@ -39,9 +39,15 @@ function RingGauge({
               fill="none"
               stroke={color}
               strokeWidth={strokeWidth}
-              strokeDasharray={`${filled} ${circumference - filled}`}
+              strokeDasharray={circumference}
+              strokeDashoffset={circumference - filled}
               strokeLinecap="round"
               transform={`rotate(-90 ${cx} ${cy})`}
+              style={{
+                "--ring-full": circumference,
+                "--ring-value": circumference - filled,
+              } as React.CSSProperties}
+              className="animate-ring-draw"
             />
           )}
         </svg>
@@ -84,19 +90,19 @@ export function GarminRings({
     bodyBattery == null
       ? "rgba(255,255,255,0.2)"
       : bodyBattery >= 70
-      ? "#22c55e"
-      : bodyBattery >= 40
-      ? "#f59e0b"
-      : "#ef4444";
+      ? "#00E87A"
+      : bodyBattery >= 50
+      ? "#FFB800"
+      : "#FF2D2D";
 
   const sleepColor =
     sleepScore == null
-      ? "#22c55e"
+      ? "#00E87A"
       : sleepScore >= 70
-      ? "#22c55e"
+      ? "#00E87A"
       : sleepScore >= 50
-      ? "#f59e0b"
-      : "#ef4444";
+      ? "#FFB800"
+      : "#FF2D2D";
 
   return (
     <>

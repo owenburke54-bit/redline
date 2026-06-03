@@ -10,12 +10,14 @@ function RingGauge({
   color,
   displayValue,
   label,
+  isRecovery,
 }: {
   value: number | null;
   max: number;
   color: string;
   displayValue: string;
   label: string;
+  isRecovery?: boolean;
 }) {
   const size = 108;
   const strokeWidth = 10;
@@ -26,9 +28,28 @@ function RingGauge({
   const cx = size / 2;
   const cy = size / 2;
 
+  // Compute drop-shadow for recovery ring based on color tier
+  let dropShadow = "";
+  if (isRecovery && value != null) {
+    if (value >= 70) {
+      dropShadow = "drop-shadow(0 0 8px rgba(0,232,122,0.4))";
+    } else if (value >= 50) {
+      dropShadow = "drop-shadow(0 0 8px rgba(255,184,0,0.3))";
+    } else {
+      dropShadow = "drop-shadow(0 0 8px rgba(255,45,45,0.3))";
+    }
+  }
+
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="relative" style={{ width: size, height: size }}>
+      <div
+        className="relative"
+        style={{
+          width: size,
+          height: size,
+          filter: dropShadow || undefined,
+        }}
+      >
         <svg
           width={size}
           height={size}
@@ -51,9 +72,15 @@ function RingGauge({
               fill="none"
               stroke={color}
               strokeWidth={strokeWidth}
-              strokeDasharray={`${filled} ${circumference - filled}`}
+              strokeDasharray={circumference}
+              strokeDashoffset={circumference - filled}
               strokeLinecap="round"
               transform={`rotate(-90 ${cx} ${cy})`}
+              style={{
+                "--ring-full": circumference,
+                "--ring-value": circumference - filled,
+              } as React.CSSProperties}
+              className="animate-ring-draw"
             />
           )}
         </svg>
@@ -99,21 +126,22 @@ export function WhoopRings({
   const rColor =
     recoveryScore == null
       ? "rgba(255,255,255,0.2)"
-      : recoveryScore >= 67
-      ? "#22c55e"
-      : recoveryScore >= 34
-      ? "#f59e0b"
-      : "#ef4444";
-  const strainColor = "#3b82f6";
+      : recoveryScore >= 70
+      ? "#00E87A"
+      : recoveryScore >= 50
+      ? "#FFB800"
+      : "#FF2D2D";
+
+  const strainColor = "#FF5500";
 
   const sleepColor =
     sleepScore == null
-      ? "#22c55e"
+      ? "#00E87A"
       : sleepScore >= 70
-      ? "#22c55e"
+      ? "#00E87A"
       : sleepScore >= 50
-      ? "#f59e0b"
-      : "#ef4444";
+      ? "#FFB800"
+      : "#FF2D2D";
 
   return (
     <>
@@ -138,6 +166,7 @@ export function WhoopRings({
           color={rColor}
           displayValue={recoveryScore != null ? `${Math.round(recoveryScore)}%` : "—"}
           label="Recovery"
+          isRecovery
         />
 
         {/* Divider — desktop only */}
@@ -153,7 +182,7 @@ export function WhoopRings({
                 <p className="text-[9px] font-bold tracking-[0.14em] uppercase text-muted-foreground/40 mb-0.5">
                   Sleep Performance
                 </p>
-                <p className="text-[1.4rem] font-black tabular-nums leading-none" style={{ color: sleepColor }}>
+                <p className="text-[1.5rem] font-black tabular-nums leading-none" style={{ color: sleepColor }}>
                   {Math.round(sleepScore)}%
                 </p>
               </div>
@@ -163,7 +192,7 @@ export function WhoopRings({
                 <p className="text-[9px] font-bold tracking-[0.14em] uppercase text-muted-foreground/40 mb-0.5">
                   Hours of Sleep
                 </p>
-                <p className="text-[1.1rem] font-black tabular-nums leading-none text-foreground">
+                <p className="text-[1.3rem] font-black tabular-nums leading-none text-foreground">
                   {formatSleepDuration(sleepDuration)}
                 </p>
               </div>
@@ -177,7 +206,7 @@ export function WhoopRings({
             {hrvRmssd != null && (
               <div>
                 <p className="text-[9px] font-bold tracking-[0.14em] uppercase text-muted-foreground/40 mb-0.5">HRV</p>
-                <p className="text-[1.1rem] font-black tabular-nums leading-none text-foreground">
+                <p className="text-[1.3rem] font-black tabular-nums leading-none text-foreground">
                   {Math.round(hrvRmssd)}ms
                 </p>
               </div>
@@ -185,7 +214,7 @@ export function WhoopRings({
             {restingHr != null && (
               <div>
                 <p className="text-[9px] font-bold tracking-[0.14em] uppercase text-muted-foreground/40 mb-0.5">RHR</p>
-                <p className="text-[1.1rem] font-black tabular-nums leading-none text-foreground">
+                <p className="text-[1.3rem] font-black tabular-nums leading-none text-foreground">
                   {Math.round(restingHr)}bpm
                 </p>
               </div>

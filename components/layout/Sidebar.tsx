@@ -76,7 +76,7 @@ export function Sidebar({ userName }: SidebarProps) {
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15">
               <span className="text-[11px] font-bold text-primary">{initials}</span>
             </div>
-            <span className="flex-1 truncate text-[13px] font-medium text-foreground">
+            <span className="flex-1 truncate text-[13px] font-medium text-foreground tracking-tight">
               {userName?.split(" ")[0] ?? "User"}
             </span>
             <button

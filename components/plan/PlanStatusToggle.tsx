@@ -57,11 +57,11 @@ export function PlanStatusToggle({ planId, initialStatus }: Props) {
     return (
       <div
         className="rounded-xl px-4 py-3 flex items-center gap-3"
-        style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.25)" }}
+        style={{ background: "rgba(255,184,0,0.08)", border: "1px solid rgba(255,184,0,0.25)" }}
       >
-        <Pause className="h-4 w-4 shrink-0" style={{ color: "#fbbf24" }} />
+        <Pause className="h-4 w-4 shrink-0" style={{ color: "#FFB800" }} />
         <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-bold" style={{ color: "#fbbf24" }}>Plan paused</p>
+          <p className="text-[12px] font-bold" style={{ color: "#FFB800" }}>Plan paused</p>
           <p className="text-[11px] text-muted-foreground/60">
             Progress tracking is paused. Workout logging is disabled until you resume.
           </p>
@@ -72,7 +72,7 @@ export function PlanStatusToggle({ planId, initialStatus }: Props) {
           disabled={loading}
           onClick={() => patchStatus("ACTIVE")}
           className="shrink-0 gap-1.5 text-[12px] h-8"
-          style={{ borderColor: "rgba(234,179,8,0.4)", color: "#fbbf24" }}
+          style={{ borderColor: "rgba(255,184,0,0.4)", color: "#FFB800" }}
         >
           <Play className="h-3 w-3" />
           {loading ? "Resuming…" : "Resume"}

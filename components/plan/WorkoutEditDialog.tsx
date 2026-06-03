@@ -27,8 +27,8 @@ interface Props {
 }
 
 const STATUS_OPTIONS = [
-  { value: "COMPLETED", label: "Completed", color: "#22c55e" },
-  { value: "SKIPPED",   label: "Skipped",   color: "#ef4444" },
+  { value: "COMPLETED", label: "Completed", color: "#00E87A" },
+  { value: "SKIPPED",   label: "Skipped",   color: "#FF2D2D" },
   { value: "SCHEDULED", label: "Scheduled", color: "rgba(255,255,255,0.5)" },
 ] as const;
 
@@ -158,9 +158,9 @@ export function WorkoutEditDialog({
             </Label>
             <div className="flex gap-2">
               {[
-                { value: "TOO_EASY", label: "Too easy", color: "#60a5fa" },
-                { value: "ABOUT_RIGHT", label: "About right", color: "#4ade80" },
-                { value: "TOO_HARD", label: "Too hard", color: "#f87171" },
+                { value: "TOO_EASY", label: "Too easy", color: "#4A9EFF" },
+                { value: "ABOUT_RIGHT", label: "About right", color: "#00E87A" },
+                { value: "TOO_HARD", label: "Too hard", color: "#FF2D2D" },
               ].map(opt => {
                 const active = perceivedDifficulty === opt.value;
                 return (

@@ -14,9 +14,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 function recoveryColor(score: number): string {
-  if (score >= 67) return "#22c55e";
-  if (score >= 34) return "#f59e0b";
-  return "#ef4444";
+  if (score >= 67) return "#00E87A";
+  if (score >= 34) return "#FFB800";
+  return "#FF2D2D";
 }
 
 function recoveryLabel(score: number): string {
@@ -163,13 +163,13 @@ export default async function DashboardPage() {
           {(() => {
             const accentColor = todayRecovery
               ? todayRecovery.recoveryScore >= 67
-                ? "#22c55e"
+                ? "#00E87A"
                 : todayRecovery.recoveryScore >= 34
-                ? "#f59e0b"
-                : "#ef4444"
+                ? "#FFB800"
+                : "#FF2D2D"
               : "rgba(255,255,255,0.12)";
             return (
-              <div className="rounded-xl bg-card overflow-hidden">
+              <div className="card-base overflow-hidden">
                 <div className="h-[3px]" style={{ backgroundColor: accentColor }} />
                 <div className="p-5">
                   <WhoopRings
@@ -213,9 +213,9 @@ export default async function DashboardPage() {
             const bb = todayGarmin?.bodyBattery ?? null;
             const accentColor = bb == null
               ? "rgba(255,255,255,0.12)"
-              : bb >= 70 ? "#22c55e" : bb >= 40 ? "#f59e0b" : "#ef4444";
+              : bb >= 70 ? "#00E87A" : bb >= 40 ? "#FFB800" : "#FF2D2D";
             return (
-              <div className="rounded-xl bg-card overflow-hidden">
+              <div className="card-base overflow-hidden">
                 <div className="h-[3px]" style={{ backgroundColor: accentColor }} />
                 <div className="p-5">
                   <GarminRings

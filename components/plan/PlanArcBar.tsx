@@ -1,11 +1,11 @@
 "use client";
 
 const PHASE_COLORS: Record<string, string> = {
-  Base:  "rgba(99,102,241,0.6)",
-  Build: "rgba(249,115,22,0.6)",
-  Peak:  "rgba(239,68,68,0.7)",
-  Taper: "rgba(234,179,8,0.6)",
-  Race:  "rgba(255,255,255,0.8)",
+  Base:  "rgba(74,158,255,0.6)",
+  Build: "rgba(255,85,0,0.65)",
+  Peak:  "rgba(255,45,45,0.7)",
+  Taper: "rgba(255,184,0,0.65)",
+  Race:  "rgba(255,255,255,0.85)",
 };
 
 interface PhaseSegment {
