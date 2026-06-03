@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { daysUntil, formatDate, getMonday } from "@/lib/utils";
-import { MessageSquare, ChevronRight } from "lucide-react";
 
 import { WhoopSyncButton } from "@/components/whoop/WhoopSyncButton";
 import { WhoopRings } from "@/components/whoop/WhoopRings";
@@ -9,6 +8,7 @@ import { GarminRings } from "@/components/garmin/GarminRings";
 import { GarminSyncButton } from "@/components/garmin/GarminSyncButton";
 import { TodayWorkouts } from "@/components/dashboard/TodayWorkouts";
 import { WeeklyCheckinCard } from "@/components/dashboard/WeeklyCheckinCard";
+import { CoachNudgeCard } from "@/components/coach/CoachNudgeCard";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -293,27 +293,22 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* Coach CTA */}
-      {events.length > 0 && (
-        <section>
-          <Link href="/coach">
-            <div className="group rounded-xl border border-border bg-card p-5 hover:border-primary/25 hover:bg-primary/[0.025] transition-all duration-200 flex items-center gap-4 cursor-pointer">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
-                <MessageSquare className="h-4 w-4 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-foreground">
-                  Talk to your AI coach
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                  Discuss goals, strength programming, and race strategy.
-                </p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
-            </div>
-          </Link>
-        </section>
-      )}
+      {/* Coach nudge — contextual, data-driven prompt */}
+      {events.length > 0 && (() => {
+        const nudge = getCoachNudge({
+          recoveryScore: todayRecovery?.recoveryScore ?? null,
+          bodyBattery: todayGarmin?.bodyBattery ?? null,
+          daysUntilNextEvent: daysUntil(events[0].date),
+          weekCompletedPct: weekScheduledCount > 0 ? weekCompletedCount / weekScheduledCount : 0,
+          todayWorkoutTitle,
+          lastCheckinDaysAgo: lastCheckin ? Math.floor((Date.now() - lastCheckin.createdAt.getTime()) / 86400000) : 999,
+        });
+        return (
+          <section>
+            <CoachNudgeCard prompt={nudge.prompt} subtext={nudge.subtext} />
+          </section>
+        );
+      })()}
 
       {/* Weekly check-in */}
       {needsCheckin && weekScheduledCount > 0 && (
@@ -358,6 +353,69 @@ export default async function DashboardPage() {
 
     </div>
   );
+}
+
+function getCoachNudge({
+  recoveryScore,
+  bodyBattery,
+  daysUntilNextEvent,
+  weekCompletedPct,
+  todayWorkoutTitle,
+  lastCheckinDaysAgo,
+}: {
+  recoveryScore: number | null;
+  bodyBattery: number | null;
+  daysUntilNextEvent: number;
+  weekCompletedPct: number;
+  todayWorkoutTitle: string | null;
+  lastCheckinDaysAgo: number;
+}): { prompt: string; subtext: string } {
+  if (recoveryScore !== null && recoveryScore < 34) {
+    return {
+      prompt: `Recovery is in the red at ${recoveryScore}%. Should we dial back this week's training load?`,
+      subtext: "Your coach noticed something",
+    };
+  }
+  if (bodyBattery !== null && bodyBattery < 30) {
+    return {
+      prompt: `Body battery is depleted. Should we swap any sessions this week for easier work?`,
+      subtext: "Your coach noticed something",
+    };
+  }
+  if (daysUntilNextEvent <= 14) {
+    return {
+      prompt: `${daysUntilNextEvent} days to race day — want to walk through your race-week plan?`,
+      subtext: "Final prep with your coach",
+    };
+  }
+  if (daysUntilNextEvent <= 28) {
+    return {
+      prompt: `You're in the final stretch at ${daysUntilNextEvent} days out. Is your taper feeling right?`,
+      subtext: "Check in with your coach",
+    };
+  }
+  if (todayWorkoutTitle) {
+    return {
+      prompt: `You've got ${todayWorkoutTitle} today — want tips on how to execute it well?`,
+      subtext: "Session guidance from your coach",
+    };
+  }
+  if (weekCompletedPct < 0.4 && weekCompletedPct > 0) {
+    return {
+      prompt: "Less than half of this week's sessions are done. Want help deciding what to prioritize?",
+      subtext: "Your coach can help",
+    };
+  }
+  if (lastCheckinDaysAgo >= 6) {
+    return {
+      prompt: "How's your body holding up with the current training load? Let's check in.",
+      subtext: "Weekly check-in with your coach",
+    };
+  }
+  return {
+    prompt: "Want to customize your plan to better fit your schedule and goals?",
+    subtext: "Your coach can adjust any session",
+  };
 }
 
 function getTimeOfDay(): string {

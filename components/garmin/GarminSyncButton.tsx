@@ -29,7 +29,7 @@ export function GarminSyncButton() {
       className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors disabled:opacity-40"
     >
       {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-      {syncing ? "Syncing…" : "Sync"}
+      {syncing ? "Updating…" : "Update"}
     </button>
   );
 }

@@ -66,9 +66,12 @@ export function CalendarView({ workouts: initialWorkouts }: CalendarViewProps) {
 
   const days = Array.from({ length: 7 }, (_, i) => addDaysUTC(weekStart, i));
 
-  const workoutsByDay = days.map(day =>
-    workouts.filter(w => isSameDayUTC(new Date(w.scheduledDate), day))
-  );
+  const workoutsByDay = days.map(day => {
+    const dayWorkouts = workouts.filter(w => isSameDayUTC(new Date(w.scheduledDate), day));
+    const nonRest = dayWorkouts.filter(w => w.type !== "REST");
+    // Multiple REST workouts from different plans → show one; if any real sessions exist, hide REST entirely
+    return nonRest.length > 0 ? nonRest : dayWorkouts.slice(0, 1);
+  });
 
   const thisWeekEmpty = workoutsByDay.every(d => d.length === 0);
   const hasConflicts = workoutsByDay.some(dayWorkouts => dayWorkouts.some(w => w.conflictFlag));

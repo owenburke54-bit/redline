@@ -37,7 +37,7 @@ export function WhoopSyncButton() {
       ) : (
         <RefreshCw className="h-3 w-3" />
       )}
-      {syncing ? "Syncing…" : "Sync"}
+      {syncing ? "Updating…" : "Update"}
     </button>
   );
 }
