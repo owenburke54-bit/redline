@@ -4,6 +4,8 @@ import { useState, useCallback } from "react";
 import { ChevronDown, Check, X, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { WorkoutEditDialog } from "@/components/plan/WorkoutEditDialog";
+import { WorkoutDetailSheet } from "@/components/plan/WorkoutDetailSheet";
+import type { WorkoutDetailData } from "@/components/plan/WorkoutDetailSheet";
 
 export type WorkoutRowData = {
   id: string;
@@ -204,6 +206,7 @@ export function WeekRow({
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [editId, setEditId] = useState<string | null>(null);
+  const [detailWorkout, setDetailWorkout] = useState<WorkoutDetailData | null>(null);
 
   const editWorkout = editId ? week.workouts.find(w => w.id === editId) ?? null : null;
 
@@ -233,6 +236,11 @@ export function WeekRow({
           onOpenChange={open => { if (!open) setEditId(null); }}
         />
       )}
+
+      <WorkoutDetailSheet
+        workout={detailWorkout}
+        onClose={() => setDetailWorkout(null)}
+      />
 
       <div
         className="rounded-xl overflow-hidden transition-all duration-200"
@@ -349,9 +357,18 @@ export function WeekRow({
                 .map(w => {
                   const s = WORKOUT_STYLE[w.type] ?? WORKOUT_STYLE.REST;
                   if (w.type === "REST") return null;
+                  const wDetail = w as WorkoutDetailData;
                   return (
-                    <div key={w.id} className="flex items-start gap-3 rounded-lg px-3 py-2.5"
-                      style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <div key={w.id}
+                      className="flex items-start gap-3 rounded-lg px-3 py-2.5 md:cursor-default cursor-pointer"
+                      style={{ background: "rgba(255,255,255,0.03)" }}
+                      onClick={() => {
+                        // Mobile: open bottom sheet on card tap
+                        if (window.matchMedia("(max-width: 767px)").matches) {
+                          setDetailWorkout(wDetail);
+                        }
+                      }}
+                    >
                       <span className="text-[9px] font-semibold text-muted-foreground/40 w-6 mt-1 shrink-0 uppercase">
                         {DAY_LABELS[w.dayOfWeek]}
                       </span>
@@ -361,6 +378,12 @@ export function WeekRow({
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] font-semibold leading-tight">{w.title}</p>
+                        {/* Desktop: show coachingCues if present, above description */}
+                        {wDetail.coachingCues && (
+                          <p className="hidden md:block text-[11px] font-semibold mt-0.5 leading-snug" style={{ color: "#fb923c" }}>
+                            {wDetail.coachingCues}
+                          </p>
+                        )}
                         <p className="text-[11px] text-muted-foreground/60 mt-0.5 leading-relaxed line-clamp-2">
                           {w.description}
                         </p>
@@ -376,14 +399,25 @@ export function WeekRow({
                           <p className="text-[10px] text-muted-foreground/50">{w.targetPace}/mi</p>
                         )}
                         <div className="flex items-center gap-0.5 justify-end">
-                          <WorkoutStatusButtons
-                            workoutId={w.id}
-                            status={w.status}
-                            planIsPaused={planIsPaused}
-                          />
+                          {/* Status buttons: desktop only (mobile uses bottom sheet) */}
+                          <div className="hidden md:flex items-center gap-0.5">
+                            <WorkoutStatusButtons
+                              workoutId={w.id}
+                              status={w.status}
+                              planIsPaused={planIsPaused}
+                            />
+                          </div>
+                          {/* Pencil: desktop opens edit dialog, mobile opens bottom sheet */}
                           <button
                             type="button"
-                            onClick={() => setEditId(w.id)}
+                            onClick={e => {
+                              e.stopPropagation();
+                              if (window.matchMedia("(max-width: 767px)").matches) {
+                                setDetailWorkout(wDetail);
+                              } else {
+                                setEditId(w.id);
+                              }
+                            }}
                             className="h-10 w-10 md:h-7 md:w-7 rounded flex items-center justify-center transition-colors hover:bg-white/10 text-muted-foreground/20 hover:text-muted-foreground/60"
                             title="Edit workout"
                           >

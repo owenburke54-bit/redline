@@ -17,6 +17,126 @@ const schema = z.object({
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// ─── Phase rules for strength generation ─────────────────────────────────────
+
+function getPhaseRules(phase: string, eventType: string): string {
+  const isRunningOnly =
+    !eventType.startsWith("HYROX") &&
+    !["TRIATHLON_SPRINT","TRIATHLON_OLYMPIC","HALF_IRONMAN","IRONMAN"].includes(eventType);
+
+  if (isRunningOnly) {
+    return "Running economy focus: single-leg stability, hip strength, calf resilience. No heavy bilateral lower body within 48h of long run. Upper body and core on easy run days.";
+  }
+
+  const lower = phase.toLowerCase();
+  if (lower === "base") {
+    return "Higher rep ranges (12-15), moderate load (RPE 6-7), longer rest (90s), unilateral focus. No heavy barbell work. Exercise selection: Bulgarian split squats, Romanian deadlifts, single-arm KB rows, goblet squats, hip thrusts, plank variations, pallof press. End with 10 min low-intensity carry.";
+  }
+  if (lower === "build") {
+    return "Moderate reps (8-12), higher load (RPE 7-8), shorter rest (60s), circuit-style. Pair movements as supersets. Include at least one HYROX station simulation. Exercise selection: farmers carry progressions, sandbag cleans/squats, box step-ups with load, KB swings, wall ball.";
+  }
+  if (lower === "peak") {
+    return "Lower volume (5-8 reps), race-pace intensity, minimal rest (30s). Full HYROX station circuits at target weight. Timed sled push/pull at race weight, heavy farmers carry at race distance.";
+  }
+  if (lower === "taper") {
+    return "Reduce volume 40%, maintain intensity. Focus on movement quality. No new movements. Race-day prep focus.";
+  }
+  return "Moderate volume and intensity. Focus on movement quality and consistency.";
+}
+
+// ─── Strength content generator ───────────────────────────────────────────────
+
+interface StrengthContent {
+  strengthBlocks: unknown;
+  warmup: string;
+  cooldown: string;
+  coachingCues: string;
+}
+
+async function generateStrengthContent(workout: {
+  id: string;
+  title: string;
+  description: string;
+  targetDuration: number | null;
+}, weekNum: number, phase: string, eventType: string): Promise<StrengthContent | null> {
+  const phaseRules = getPhaseRules(phase, eventType);
+
+  const prompt = `You are generating a structured strength workout for a ${eventType} athlete in the ${phase} phase (week ${weekNum}).
+
+SESSION CONTEXT: ${workout.title} — ${workout.description}
+TARGET DURATION: ${workout.targetDuration ?? 45} minutes
+
+Return ONLY valid JSON (no markdown, no explanation):
+{
+  "warmup": "5-8 min explicit warmup description",
+  "coachingCues": "1-2 sentence coaching focus for this session",
+  "strengthBlocks": [
+    {
+      "exercise": "Exercise name",
+      "sets": 3,
+      "reps": "10-12",
+      "load": "load guidance string",
+      "tempo": "3-1-1-0",
+      "rest": "90s",
+      "cue": "one sentence focus cue"
+    }
+  ],
+  "cooldown": "5 min explicit cooldown description"
+}
+
+PHASE RULES:
+${phaseRules}
+
+The strengthBlocks array must have 3-5 exercises with ALL fields populated.`;
+
+  try {
+    const message = await anthropic.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 1024,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const text = message.content[0].type === "text" ? message.content[0].text : "";
+    const parsed = parseClaudeJson(text) as Record<string, unknown> | null;
+    if (!parsed || !Array.isArray(parsed.strengthBlocks)) return null;
+
+    return {
+      strengthBlocks: parsed.strengthBlocks,
+      warmup: typeof parsed.warmup === "string" ? parsed.warmup : "",
+      cooldown: typeof parsed.cooldown === "string" ? parsed.cooldown : "",
+      coachingCues: typeof parsed.coachingCues === "string" ? parsed.coachingCues : "",
+    };
+  } catch (err) {
+    console.error(`Strength generation failed for workout ${workout.id}:`, err);
+    return null;
+  }
+}
+
+// ─── Post-insert: parallel strength generation (fire-and-forget) ──────────────
+
+async function enrichStrengthWorkouts(
+  planId: string,
+  strengthWorkouts: Array<{ id: string; title: string; description: string; targetDuration: number | null; week: number; phase: string }>,
+  eventType: string
+): Promise<void> {
+  await Promise.all(
+    strengthWorkouts.map(async (w) => {
+      const content = await generateStrengthContent(w, w.week, w.phase, eventType);
+      if (!content) return;
+      await db.workout.update({
+        where: { id: w.id },
+        data: {
+          strengthBlocks: content.strengthBlocks as object,
+          warmup: content.warmup || null,
+          cooldown: content.cooldown || null,
+          coachingCues: content.coachingCues || null,
+        },
+      });
+    })
+  );
+  console.log(`[plans/generate] Enriched ${strengthWorkouts.length} strength workouts for plan ${planId}`);
+}
+
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -249,6 +369,41 @@ export async function POST(req: NextRequest) {
 
     return newPlan;
   });
+
+  // Fire-and-forget: generate rich strength content for STRENGTH and HYROX_STATION_WORK workouts.
+  // We fetch the newly inserted workout IDs then enrich them in parallel.
+  // This runs after the response is sent so plan generation stays fast.
+  const strengthTypes = new Set(["STRENGTH", "HYROX_STATION_WORK"]);
+  const strengthTemplateWorkouts = filteredWorkouts.filter(w => strengthTypes.has(w.type));
+
+  if (strengthTemplateWorkouts.length > 0) {
+    // Fetch IDs for the newly created strength workouts
+    db.workout.findMany({
+      where: {
+        planId: plan.id,
+        type: { in: ["STRENGTH", "HYROX_STATION_WORK"] },
+      },
+      select: { id: true, title: true, description: true, targetDuration: true, scheduledDate: true },
+    }).then(dbWorkouts => {
+      // Match with template workouts to get week/phase info
+      const enrichList = dbWorkouts.map(dbW => {
+        const match = strengthTemplateWorkouts.find(
+          tw => tw.title === dbW.title && new Date(tw.scheduledDate).toISOString().split("T")[0] === dbW.scheduledDate.toISOString().split("T")[0]
+        );
+        return {
+          id: dbW.id,
+          title: dbW.title,
+          description: dbW.description,
+          targetDuration: dbW.targetDuration,
+          week: match?.week ?? 1,
+          phase: match?.phase ?? "Base",
+        };
+      });
+      return enrichStrengthWorkouts(plan.id, enrichList, event.type);
+    }).catch(err => {
+      console.error("[plans/generate] Strength enrichment failed:", err);
+    });
+  }
 
   return NextResponse.json({ planId: plan.id, templateBase: templateKey, totalWeeks: builtPlan.totalWeeks });
 }

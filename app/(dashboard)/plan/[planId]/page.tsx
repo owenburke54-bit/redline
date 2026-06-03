@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getMonday } from "@/lib/utils";
 import { WeekRow, type WeekRowData, type WorkoutRowData } from "@/components/plan/WeekRow";
+import type { WorkoutDetailData } from "@/components/plan/WorkoutDetailSheet";
 import { ResolveConflictsButton } from "@/components/plan/ResolveConflictsButton";
 import { PlanStatusToggle } from "@/components/plan/PlanStatusToggle";
 import { RestoreTemplateButton } from "@/components/plan/RestoreTemplateButton";
@@ -59,7 +60,7 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
     const dayOfWeek = (w.scheduledDate.getDay() + 6) % 7; // Sun=0 → convert to Mon=0
 
     if (!weekMap.has(weekNum)) weekMap.set(weekNum, []);
-    weekMap.get(weekNum)!.push({
+    const workoutRow: WorkoutDetailData = {
       id: w.id,
       type: w.type,
       title: w.title,
@@ -71,7 +72,14 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
       dayOfWeek,
       perceivedEffort: w.perceivedEffort,
       actualDistance: w.actualDistance,
-    });
+      scheduledDate: w.scheduledDate.toISOString(),
+      intensityZone: w.intensityZone,
+      strengthBlocks: (w.strengthBlocks as WorkoutDetailData["strengthBlocks"]) ?? null,
+      warmup: w.warmup ?? null,
+      cooldown: w.cooldown ?? null,
+      coachingCues: w.coachingCues ?? null,
+    };
+    weekMap.get(weekNum)!.push(workoutRow as WorkoutRowData);
   }
 
   // Build WeekRowData[]

@@ -203,6 +203,11 @@ model Workout {
   conflictFlag   Boolean @default(false)
   conflictNote   String?
 
+  strengthBlocks Json?
+  warmup         String?
+  cooldown       String?
+  coachingCues   String?
+
   createdAt DateTime @default(now())
 }
 
