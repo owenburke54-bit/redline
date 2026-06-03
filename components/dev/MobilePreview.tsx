@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Smartphone, X } from "lucide-react";
+import { Smartphone, X, ChevronUp } from "lucide-react";
 
 export function MobilePreview() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  function scrollToTop() {
+    try {
+      const win = iframeRef.current?.contentWindow;
+      const doc = iframeRef.current?.contentDocument;
+      win?.scrollTo({ top: 0, behavior: "smooth" });
+      doc?.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      // cross-origin guard (same-origin in practice)
+    }
+  }
 
   return (
     <>
@@ -45,8 +57,25 @@ export function MobilePreview() {
               <div className="absolute -right-[3px] top-[115px] w-[3px] h-14 rounded-r bg-neutral-600" />
 
               {/* Screen */}
-              <div className="overflow-hidden bg-neutral-950" style={{ borderRadius: "2rem", width: 390, height: 844 }}>
+              <div className="relative overflow-hidden bg-neutral-950" style={{ borderRadius: "2rem", width: 390, height: 844 }}>
+                {/* Persistent control bar — always visible, overlays iframe content */}
+                <div
+                  className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4"
+                  style={{ height: 52, background: "linear-gradient(to bottom, rgba(0,0,0,0.75) 70%, transparent)" }}
+                >
+                  {/* spacer for dynamic island */}
+                  <span className="text-[9px] text-white/30 font-mono truncate max-w-[220px]">{pathname}</span>
+                  <button
+                    onClick={scrollToTop}
+                    className="flex items-center gap-1 text-[10px] text-white/50 hover:text-white transition-colors font-semibold ml-2 shrink-0"
+                  >
+                    <ChevronUp className="h-3 w-3" />
+                    Top
+                  </button>
+                </div>
+
                 <iframe
+                  ref={iframeRef}
                   key={open ? "open" : "closed"}
                   src={pathname}
                   title="Mobile preview"
