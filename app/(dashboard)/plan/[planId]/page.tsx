@@ -7,6 +7,7 @@ import type { WorkoutDetailData } from "@/components/plan/WorkoutDetailSheet";
 import { ResolveConflictsButton } from "@/components/plan/ResolveConflictsButton";
 import { PlanStatusToggle } from "@/components/plan/PlanStatusToggle";
 import { RestoreTemplateButton } from "@/components/plan/RestoreTemplateButton";
+import { PlanArcBar } from "@/components/plan/PlanArcBar";
 import { Trophy, Target, CalendarDays } from "lucide-react";
 import { daysUntil } from "@/lib/utils";
 import Link from "next/link";
@@ -131,14 +132,21 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
   const currentPhase = currentWeekIndex >= 0 ? weeks[currentWeekIndex].phase : weeks[0]?.phase ?? "Base";
 
   // Phase timeline: group consecutive same-phase weeks
-  const phaseSegments: { phase: string; count: number; startsAtCurrentWeek: boolean }[] = [];
+  const phaseSegments: { phase: string; count: number; startsAtCurrentWeek: boolean; isPastPhase: boolean; isFuturePhase: boolean }[] = [];
   for (const w of weeks) {
     const last = phaseSegments[phaseSegments.length - 1];
     if (last && last.phase === w.phase) {
       last.count++;
       if (w.isCurrentWeek) last.startsAtCurrentWeek = true;
+      if (!w.isPast) last.isPastPhase = false;
     } else {
-      phaseSegments.push({ phase: w.phase, count: 1, startsAtCurrentWeek: w.isCurrentWeek });
+      phaseSegments.push({ phase: w.phase, count: 1, startsAtCurrentWeek: w.isCurrentWeek, isPastPhase: w.isPast, isFuturePhase: false });
+    }
+  }
+  // Mark future phases
+  for (const seg of phaseSegments) {
+    if (seg.phase !== currentPhase && !seg.isPastPhase && !seg.startsAtCurrentWeek) {
+      seg.isFuturePhase = true;
     }
   }
 
@@ -220,44 +228,24 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
           { label: "Completion", value: completionPct > 0 ? `${completionPct}%` : "—", sub: `${totalCompleted} / ${totalNonRest} sessions` },
           { label: "Phase", value: currentPhase, sub: "current" },
         ].map(stat => (
-          <div key={stat.label} className="rounded-xl bg-card p-4">
+          <div key={stat.label} className="rounded-xl bg-card p-4 sm:p-5">
             <p className="text-[9px] font-semibold tracking-[0.18em] text-muted-foreground/40 uppercase mb-1.5">{stat.label}</p>
             <p className="text-[1.4rem] font-black leading-none tabular-nums"
               style={stat.label === "Phase" ? { color: PHASE_COLORS[stat.value] ?? accentColor, fontSize: "1rem" } : undefined}>
               {stat.value}
             </p>
-            <p className="text-[10px] text-muted-foreground/40 mt-1">{stat.sub}</p>
+            <p className="text-[10px] text-muted-foreground/40 mt-2">{stat.sub}</p>
           </div>
         ))}
       </div>
 
       {/* Phase timeline strip */}
-      <div>
-        <p className="text-[9px] font-semibold tracking-[0.22em] text-muted-foreground/30 uppercase mb-2">Plan Arc</p>
-        <div className="flex h-6 rounded-full overflow-hidden gap-px">
-          {phaseSegments.map((seg, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-center relative"
-              style={{
-                flex: seg.count,
-                background: PHASE_COLORS[seg.phase] ?? "rgba(255,255,255,0.2)",
-                opacity: seg.phase === currentPhase ? 1 : 0.45,
-              }}
-            >
-              {seg.count >= 3 && (
-                <span className="text-[8px] font-black uppercase tracking-wider text-black/70 select-none">
-                  {seg.phase}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-between mt-1.5">
-          <span className="text-[9px] text-muted-foreground/30">Week 1</span>
-          <span className="text-[9px] text-muted-foreground/30">Week {plan.totalWeeks}</span>
-        </div>
-      </div>
+      <PlanArcBar
+        phaseSegments={phaseSegments}
+        currentPhase={currentPhase}
+        accentColor={accentColor}
+        totalWeeks={plan.totalWeeks}
+      />
 
       {/* Day-of-week column headers — desktop only, matches WeekRow day grid */}
       <div className="hidden md:flex items-center gap-4 px-4">
@@ -279,7 +267,7 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
       {/* Week sections grouped by phase */}
       <div className="space-y-8">
         {phaseSections.map((section, si) => (
-          <div key={si}>
+          <div key={si} id={`phase-${section.phase}`}>
             <div className="flex items-center gap-3 mb-3">
               <div
                 className="h-px flex-1"

@@ -100,8 +100,24 @@ export function buildCoachSystemPrompt(params: {
   stravaZoneContext?: string;
   activeConflicts: string[];
   classSchedule?: { studios: { id: string; name: string; days: number[] }[] } | null;
+  recentTraining?: {
+    completedWorkouts: Array<{
+      date: string;
+      type: string;
+      plannedDistance: number | null;
+      actualDistance: number | null;
+      rpe: number | null;
+      perceivedDifficulty: string | null;
+      status: string;
+      hasNote: boolean;
+      coachingCues: string | null;
+    }>;
+    compliancePct: number;
+    flaggedSessions: string[];
+    whoopTrend: Array<{ date: string; score: number; hrv: number | null }>;
+  };
 }): string {
-  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, stravaZoneContext, activeConflicts, classSchedule } = params;
+  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, stravaZoneContext, activeConflicts, classSchedule, recentTraining } = params;
 
   const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const classScheduleNote = classSchedule?.studios && classSchedule.studios.length > 0
@@ -166,6 +182,36 @@ Triathlon plans require swim/bike/run periodization that is not yet fully suppor
 - Full Ironman: Zone 2 on the bike almost the entire way. Even Zone 2 feels uncomfortable by mile 18 of the marathon.
 - Brick workouts (bike immediately followed by run) are essential — the legs feel very different transitioning from cycling.` : "";
 
+  const recentTrainingSection = recentTraining ? (() => {
+    const workoutLines = recentTraining.completedWorkouts.map(w => {
+      const dist = w.actualDistance != null ? `${w.actualDistance}mi actual` : w.plannedDistance != null ? `${w.plannedDistance}mi planned` : "no distance";
+      const rpe = w.rpe != null ? `RPE ${w.rpe}` : "no RPE";
+      const felt = w.perceivedDifficulty ? `, felt: ${w.perceivedDifficulty.replace("_", " ").toLowerCase()}` : "";
+      const noNote = (w.status === "SKIPPED" || w.status === "MODIFIED") && !w.hasNote ? " (no note)" : "";
+      return `- ${w.date}: ${w.type} — ${w.status}, ${dist}, ${rpe}${felt}${noNote}`;
+    }).join("\n") || "No workouts in the last 7 days";
+
+    const completedCount = recentTraining.completedWorkouts.filter(w => w.status === "COMPLETED").length;
+    const totalCount = recentTraining.completedWorkouts.length;
+
+    const flagsLine = recentTraining.flaggedSessions.length > 0
+      ? `\nFlagged: ${recentTraining.flaggedSessions.join(", ")}`
+      : "";
+
+    const whoopLines = recentTraining.whoopTrend.length > 0
+      ? recentTraining.whoopTrend.map(d => `- ${d.date}: ${d.score}% recovery${d.hrv != null ? `, HRV ${Math.round(d.hrv)}ms` : ""}`).join("\n")
+      : "No WHOOP data";
+
+    return `
+RECENT TRAINING (last 7 days):
+${workoutLines}
+
+Compliance last 14 days: ${recentTraining.compliancePct}% (${completedCount}/${totalCount} sessions completed)${flagsLine}
+
+WHOOP trend (7 days):
+${whoopLines}`;
+  })() : "";
+
   return `You are a direct, experienced endurance and functional fitness coach working with ${athleteName}.
 
 ATHLETE PROFILE:
@@ -174,11 +220,11 @@ Dedication score: ${dedicationScore}/10${dedicationScore >= 8 ? " — they expec
 
 ACTIVE EVENTS:
 ${activeEvents.map(e => `- ${e.name} (${e.type}): ${e.weeksOut} weeks away${e.goalTime ? ` | Goal: ${e.goalTime}` : ""}`).join("\n")}
-
+${recentTrainingSection}
 THIS WEEK'S WORKOUTS:
 ${currentWeekWorkouts}
 
-RECENT TRAINING (last 4 weeks):
+RECENT STRAVA ACTIVITY:
 ${recentActivity}
 
 WEARABLE BIOMETRIC DATA:

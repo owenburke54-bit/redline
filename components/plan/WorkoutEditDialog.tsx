@@ -20,6 +20,7 @@ interface Props {
   initialStatus: string;
   initialEffort: number | null;
   initialActualDistance: number | null;
+  initialPerceivedDifficulty?: string | null;
   targetDistance: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -37,6 +38,7 @@ export function WorkoutEditDialog({
   initialStatus,
   initialEffort,
   initialActualDistance,
+  initialPerceivedDifficulty,
   targetDistance,
   open,
   onOpenChange,
@@ -48,6 +50,7 @@ export function WorkoutEditDialog({
   const [actualDistance, setActualDistance] = useState(
     initialActualDistance != null ? String(initialActualDistance) : ""
   );
+  const [perceivedDifficulty, setPerceivedDifficulty] = useState<string | null>(initialPerceivedDifficulty ?? null);
   const [saving, setSaving] = useState(false);
   const router = useRouter();
 
@@ -59,6 +62,7 @@ export function WorkoutEditDialog({
       const distNum = actualDistance !== "" ? parseFloat(actualDistance) : null;
       if (effortNum != null && effortNum >= 1 && effortNum <= 10) body.perceivedEffort = effortNum;
       if (distNum != null && distNum > 0) body.actualDistance = distNum;
+      body.perceivedDifficulty = perceivedDifficulty;
 
       const res = await fetch(`/api/workouts/${workoutId}`, {
         method: "PATCH",
@@ -146,6 +150,35 @@ export function WorkoutEditDialog({
               />
             </div>
           )}
+
+          {/* Perceived difficulty */}
+          <div>
+            <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-2 block">
+              How did it feel?
+            </Label>
+            <div className="flex gap-2">
+              {[
+                { value: "TOO_EASY", label: "Too easy", color: "#60a5fa" },
+                { value: "ABOUT_RIGHT", label: "About right", color: "#4ade80" },
+                { value: "TOO_HARD", label: "Too hard", color: "#f87171" },
+              ].map(opt => {
+                const active = perceivedDifficulty === opt.value;
+                return (
+                  <button key={opt.value} type="button"
+                    onClick={() => setPerceivedDifficulty(active ? null : opt.value)}
+                    className="flex-1 py-2 rounded-lg text-[10px] font-bold transition-all"
+                    style={{
+                      background: active ? `${opt.color}20` : "rgba(255,255,255,0.04)",
+                      border: `1px solid ${active ? `${opt.color}50` : "rgba(255,255,255,0.08)"}`,
+                      color: active ? opt.color : "rgba(255,255,255,0.3)",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         <DialogFooter className="gap-2 mt-4">

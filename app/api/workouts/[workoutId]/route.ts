@@ -9,6 +9,7 @@ const schema = z.object({
   actualDuration: z.number().int().optional(),
   perceivedEffort: z.number().min(1).max(10).optional(),
   description: z.string().max(3000).optional(),
+  perceivedDifficulty: z.enum(["TOO_EASY", "ABOUT_RIGHT", "TOO_HARD"]).nullable().optional(),
 });
 
 export async function PATCH(
@@ -29,7 +30,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { status, actualDistance, actualDuration, perceivedEffort, description } = parsed.data;
+  const { status, actualDistance, actualDuration, perceivedEffort, description, perceivedDifficulty } = parsed.data;
 
   const updated = await db.workout.update({
     where: { id: workoutId },
@@ -42,6 +43,7 @@ export async function PATCH(
       ...(actualDuration !== undefined && { actualDuration }),
       ...(perceivedEffort !== undefined && { perceivedEffort }),
       ...(description !== undefined && { description }),
+      ...(perceivedDifficulty !== undefined && { perceivedDifficulty }),
     },
     select: { status: true },
   });

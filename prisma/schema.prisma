@@ -41,6 +41,7 @@ model User {
   garminDailySummaries  GarminDailySummary[]
   checkins              WeeklyCheckin[]
   athleteProfile        AthleteProfile?
+  weeklyBriefs          WeeklyBrief[]
 }
 
 model Account {
@@ -203,10 +204,11 @@ model Workout {
   conflictFlag   Boolean @default(false)
   conflictNote   String?
 
-  strengthBlocks Json?
-  warmup         String?
-  cooldown       String?
-  coachingCues   String?
+  strengthBlocks      Json?
+  warmup              String?
+  cooldown            String?
+  coachingCues        String?
+  perceivedDifficulty PerceivedDifficulty?
 
   createdAt DateTime @default(now())
 }
@@ -229,6 +231,12 @@ enum WorkoutStatus {
   COMPLETED
   SKIPPED
   MODIFIED
+}
+
+enum PerceivedDifficulty {
+  TOO_EASY
+  ABOUT_RIGHT
+  TOO_HARD
 }
 
 model StravaActivity {
@@ -336,4 +344,16 @@ model GarminDailySummary {
   createdAt DateTime @default(now())
 
   @@unique([userId, date])
+}
+
+model WeeklyBrief {
+  id        String   @id @default(cuid())
+  userId    String
+  weekStart DateTime @db.Date
+  content   String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart])
 }

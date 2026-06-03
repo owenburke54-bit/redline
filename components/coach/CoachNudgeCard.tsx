@@ -37,7 +37,7 @@ export function CoachNudgeCard({ prompt, subtext }: CoachNudgeCardProps) {
             {prompt}
           </p>
           <p className="text-[11px] text-primary font-semibold mt-2.5 group-hover:underline">
-            Ask coach →
+            <span className="inline-block py-1">Ask coach →</span>
           </p>
         </div>
       </div>

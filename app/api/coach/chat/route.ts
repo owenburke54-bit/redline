@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [user, profile, events, weekWorkouts, whoopActivities, todayRecovery, stravaRuns, whoopRunning, todayGarmin] = await Promise.all([
+  const [user, profile, events, weekWorkouts, whoopActivities, todayRecovery, stravaRuns, whoopRunning, todayGarmin, recentWorkouts7, whoopTrend7, last14Workouts] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.athleteProfile.findUnique({ where: { userId } }),
     db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" } }),
@@ -87,6 +87,36 @@ export async function POST(req: NextRequest) {
       where: { userId },
       orderBy: { date: "desc" },
       select: { bodyBattery: true, stressAvg: true, restingHr: true, sleepScore: true, sleepDuration: true, sleepHrv: true },
+    }),
+    // Last 7 days of workouts with logging data
+    db.workout.findMany({
+      where: {
+        userId,
+        scheduledDate: { gte: new Date(Date.now() - 7 * 86400000) },
+        type: { not: "REST" },
+      },
+      orderBy: { scheduledDate: "asc" },
+      select: {
+        type: true, title: true, scheduledDate: true,
+        targetDistance: true, actualDistance: true,
+        perceivedEffort: true, perceivedDifficulty: true,
+        status: true, description: true, coachingCues: true,
+      },
+    }),
+    // Last 7 days WHOOP recovery trend
+    db.whoopRecovery.findMany({
+      where: { userId, date: { gte: new Date(Date.now() - 7 * 86400000) } },
+      orderBy: { date: "asc" },
+      select: { date: true, recoveryScore: true, hrvRmssd: true },
+    }),
+    // Last 14 days workouts for compliance
+    db.workout.findMany({
+      where: {
+        userId,
+        scheduledDate: { gte: new Date(Date.now() - 14 * 86400000) },
+        type: { not: "REST" },
+      },
+      select: { status: true },
     }),
   ]);
 
@@ -138,6 +168,57 @@ export async function POST(req: NextRequest) {
     ? buildStravaZoneContext(zones, todayRecovery?.recoveryScore ?? null)
     : undefined;
 
+  // Build recentTraining for coach context
+  const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const completed14 = last14Workouts.filter(w => w.status === "COMPLETED").length;
+  const compliancePct = last14Workouts.length > 0 ? Math.round((completed14 / last14Workouts.length) * 100) : 0;
+
+  const flaggedSessions: string[] = [];
+  const tooEasyCount = recentWorkouts7.filter(w => w.perceivedDifficulty === "TOO_EASY").length;
+
+  const completedWorkouts7 = recentWorkouts7.map(w => {
+    const dayLabel = WEEKDAY_SHORT[w.scheduledDate.getDay()];
+    const typeLabel = w.type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+    // Flag skipped with no note
+    if (w.status === "SKIPPED" && !w.description) {
+      flaggedSessions.push(`${dayLabel} ${typeLabel} skipped with no explanation`);
+    }
+    // Flag too hard + high RPE
+    if (w.perceivedDifficulty === "TOO_HARD" && w.perceivedEffort != null && w.perceivedEffort >= 8) {
+      flaggedSessions.push(`${dayLabel} ${typeLabel} felt too hard (RPE ${w.perceivedEffort})`);
+    }
+
+    return {
+      date: w.scheduledDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+      type: typeLabel,
+      plannedDistance: w.targetDistance,
+      actualDistance: w.actualDistance,
+      rpe: w.perceivedEffort,
+      perceivedDifficulty: w.perceivedDifficulty as string | null,
+      status: w.status,
+      hasNote: !!(w.description && w.description.trim().length > 0),
+      coachingCues: w.coachingCues,
+    };
+  });
+
+  if (tooEasyCount >= 3) {
+    flaggedSessions.push(`${tooEasyCount} sessions felt too easy — consider increasing load`);
+  }
+
+  const whoopTrend = whoopTrend7.map(r => ({
+    date: r.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+    score: Math.round(r.recoveryScore),
+    hrv: r.hrvRmssd,
+  }));
+
+  const recentTraining = {
+    completedWorkouts: completedWorkouts7,
+    compliancePct,
+    flaggedSessions,
+    whoopTrend,
+  };
+
   const systemPrompt = buildCoachSystemPrompt({
     athleteName: user?.name?.split(" ")[0] ?? "Athlete",
     dedicationScore: user?.dedicationScore ?? 7,
@@ -156,6 +237,7 @@ export async function POST(req: NextRequest) {
       const r = classScheduleSchema.safeParse(profile?.classSchedule);
       return r.success ? r.data : null;
     })(),
+    recentTraining,
   });
 
   const conversationMessages: { role: "user" | "assistant"; content: string }[] = isInitial

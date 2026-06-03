@@ -360,7 +360,7 @@ export function WeekRow({
                   const wDetail = w as WorkoutDetailData;
                   return (
                     <div key={w.id}
-                      className="flex items-start gap-3 rounded-lg px-3 py-2.5 md:cursor-default cursor-pointer"
+                      className="flex items-start gap-3 rounded-lg px-3 py-3 md:cursor-default cursor-pointer"
                       style={{ background: "rgba(255,255,255,0.03)" }}
                       onClick={() => {
                         // Mobile: open bottom sheet on card tap

@@ -210,6 +210,12 @@ export default async function ProgressPage() {
           label="This week"
           value={thisWeekMi > 0 ? `${thisWeekMi.toFixed(0)} mi` : `${currentWeekData.planned} sessions`}
           sub={thisWeekMi > 0 ? "planned volume" : "planned"}
+          emptyHint={currentWeekData.planned === 0 ? (() => {
+            const firstFuture = workouts.find(w => new Date(w.scheduledDate) > today);
+            return firstFuture
+              ? `Plan starts ${new Date(firstFuture.scheduledDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+              : undefined;
+          })() : undefined}
         />
         <StatCard
           icon={<CheckCircle2 className="h-4 w-4" />}
@@ -223,6 +229,7 @@ export default async function ProgressPage() {
               ? "var(--marathon-color)"
               : undefined
             : undefined}
+          emptyHint={fourWeekRate === null ? "Complete your first session to start tracking" : undefined}
         />
         <StatCard
           icon={<Layers className="h-4 w-4" />}
@@ -230,6 +237,7 @@ export default async function ProgressPage() {
           value={streak > 0 ? `${streak}wk` : "—"}
           sub="consecutive weeks"
           accent={streak >= 4 ? "var(--hyrox-color)" : streak >= 1 ? "var(--marathon-color)" : undefined}
+          emptyHint={streak === 0 ? "Finish your first full week to start a streak" : undefined}
         />
         <StatCard
           icon={<Timer className="h-4 w-4" />}
@@ -307,6 +315,11 @@ export default async function ProgressPage() {
                       Week {plan.currentWeek} of {plan.totalWeeks}
                       {plan.totalCount > 0 && ` · ${plan.completedCount}/${plan.totalCount} workouts done`}
                     </p>
+                    {plan.completedCount === 0 && (
+                      <p className="text-[11px] text-muted-foreground/50 mt-1">
+                        Tap any workout to log your first session
+                      </p>
+                    )}
                   </div>
                   <span
                     className="text-sm font-bold tabular-nums"
@@ -367,12 +380,14 @@ export default async function ProgressPage() {
             recoveryDate={todayRecovery?.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) ?? null}
             lastActivityDate={lastActivity?.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) ?? null}
           />
-          <GarminConnectCard
-            connected={garminConnected}
-            bodyBattery={garminLatest?.bodyBattery ?? null}
-            batteryDate={garminLatest?.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) ?? null}
-            lastSyncDate={garminLatest?.date.toLocaleDateString("en-US", { month: "short", day: "numeric" }) ?? null}
-          />
+          {process.env.NEXT_PUBLIC_GARMIN_ENABLED === "true" && (
+            <GarminConnectCard
+              connected={garminConnected}
+              bodyBattery={garminLatest?.bodyBattery ?? null}
+              batteryDate={garminLatest?.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) ?? null}
+              lastSyncDate={garminLatest?.date.toLocaleDateString("en-US", { month: "short", day: "numeric" }) ?? null}
+            />
+          )}
           {/* Strava */}
           <div className="rounded border border-border bg-card p-4">
             <div className="flex items-center justify-between">
@@ -473,12 +488,14 @@ function StatCard({
   value,
   sub,
   accent,
+  emptyHint,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   sub: string;
   accent?: string;
+  emptyHint?: string;
 }) {
   return (
     <div className="rounded border border-border bg-card p-4">
@@ -493,6 +510,9 @@ function StatCard({
         {value}
       </p>
       <p className="text-xs text-muted-foreground mt-1 truncate">{sub}</p>
+      {emptyHint && (
+        <p className="text-[11px] text-muted-foreground/50 mt-1 leading-snug">{emptyHint}</p>
+      )}
     </div>
   );
 }

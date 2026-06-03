@@ -176,6 +176,7 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
   const [status, setStatus] = useState<string>("SCHEDULED");
   const [effort, setEffort] = useState("");
   const [actualDistance, setActualDistance] = useState("");
+  const [perceivedDifficulty, setPerceivedDifficulty] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const router = useRouter();
 
@@ -185,6 +186,7 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
       setStatus(STATUS_OPTIONS.some(o => o.value === workout.status) ? workout.status : "SCHEDULED");
       setEffort(workout.perceivedEffort != null ? String(workout.perceivedEffort) : "");
       setActualDistance(workout.actualDistance != null ? String(workout.actualDistance) : "");
+      setPerceivedDifficulty((workout as WorkoutDetailData & { perceivedDifficulty?: string | null }).perceivedDifficulty ?? null);
     }
   }, [workout?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -207,6 +209,7 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
       const distNum = actualDistance !== "" ? parseFloat(actualDistance) : null;
       if (effortNum != null && effortNum >= 1 && effortNum <= 10) body.perceivedEffort = effortNum;
       if (distNum != null && distNum > 0) body.actualDistance = distNum;
+      body.perceivedDifficulty = perceivedDifficulty;
 
       const res = await fetch(`/api/workouts/${workout.id}`, {
         method: "PATCH",
@@ -223,7 +226,7 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
     } finally {
       setSaving(false);
     }
-  }, [workout, status, effort, actualDistance, onClose, onWorkoutUpdated, router]);
+  }, [workout, status, effort, actualDistance, perceivedDifficulty, onClose, onWorkoutUpdated, router]);
 
   // Don't render on desktop (md+). Use a CSS media query via a hidden/visible trick.
   // We render the portal but make it invisible at md+ via CSS.
@@ -452,6 +455,35 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
                     />
                   </div>
                 )}
+              </div>
+
+              {/* Perceived difficulty */}
+              <div>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40 block mb-1.5">
+                  How did it feel?
+                </label>
+                <div className="flex gap-2">
+                  {[
+                    { value: "TOO_EASY", label: "Too easy", color: "#60a5fa" },
+                    { value: "ABOUT_RIGHT", label: "About right", color: "#4ade80" },
+                    { value: "TOO_HARD", label: "Too hard", color: "#f87171" },
+                  ].map(opt => {
+                    const active = perceivedDifficulty === opt.value;
+                    return (
+                      <button key={opt.value} type="button"
+                        onClick={() => setPerceivedDifficulty(active ? null : opt.value)}
+                        className="flex-1 py-2 rounded-lg text-[10px] font-bold transition-all"
+                        style={{
+                          background: active ? `${opt.color}20` : "rgba(255,255,255,0.04)",
+                          border: `1px solid ${active ? `${opt.color}50` : "rgba(255,255,255,0.08)"}`,
+                          color: active ? opt.color : "rgba(255,255,255,0.3)",
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>

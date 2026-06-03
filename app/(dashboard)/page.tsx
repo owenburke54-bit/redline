@@ -9,6 +9,7 @@ import { GarminSyncButton } from "@/components/garmin/GarminSyncButton";
 import { TodayWorkouts } from "@/components/dashboard/TodayWorkouts";
 import { WeeklyCheckinCard } from "@/components/dashboard/WeeklyCheckinCard";
 import { CoachNudgeCard } from "@/components/coach/CoachNudgeCard";
+import { WeeklyBriefCard } from "@/components/dashboard/WeeklyBriefCard";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -135,7 +136,7 @@ export default async function DashboardPage() {
   const todayWorkoutTitle = hardTodayWorkout?.title ?? null;
 
   return (
-    <div className="max-w-3xl space-y-12">
+    <div className="max-w-3xl space-y-8 md:space-y-12">
       {/* Greeting */}
       <div>
         <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/50 uppercase mb-2">
@@ -144,7 +145,7 @@ export default async function DashboardPage() {
         <h1 className="text-[3.25rem] font-black tracking-tight leading-none text-foreground">
           {user?.name?.split(" ")[0] ?? "Athlete"}.
         </h1>
-        <p className="text-[13px] text-muted-foreground mt-4">
+        <p className="text-[13px] text-muted-foreground mt-2">
           Dedication score —{" "}
           <span className="text-primary font-bold">{user?.dedicationScore}/10</span>
         </p>
@@ -153,7 +154,7 @@ export default async function DashboardPage() {
       {/* WHOOP recovery */}
       {whoopConnected && (
         <section>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2 md:mb-4">
             <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase">
               Recovery
             </p>
@@ -200,9 +201,9 @@ export default async function DashboardPage() {
       )}
 
       {/* Garmin readiness */}
-      {garminConnected && (
+      {process.env.NEXT_PUBLIC_GARMIN_ENABLED === "true" && garminConnected && (
         <section>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2 md:mb-4">
             <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase">
               Readiness
             </p>
@@ -243,7 +244,7 @@ export default async function DashboardPage() {
       {/* Upcoming events */}
       {events.length > 0 && (
         <section>
-          <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-4">
+          <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-2 md:mb-4">
             Upcoming Events
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -293,6 +294,13 @@ export default async function DashboardPage() {
         </section>
       )}
 
+      {/* Weekly brief */}
+      {events.length > 0 && (
+        <section>
+          <WeeklyBriefCard />
+        </section>
+      )}
+
       {/* Coach nudge — contextual, data-driven prompt */}
       {events.length > 0 && (() => {
         const nudge = getCoachNudge({
@@ -322,7 +330,7 @@ export default async function DashboardPage() {
 
       {/* Today's workouts */}
       <section>
-        <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-4">
+        <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase mb-2 md:mb-4">
           Today
         </p>
         <TodayWorkouts
