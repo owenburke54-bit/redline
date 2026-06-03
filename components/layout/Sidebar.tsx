@@ -9,7 +9,6 @@ import {
   Calendar,
   Trophy,
   TrendingUp,
-  MessageSquare,
   LogOut,
   Zap,
 } from "lucide-react";
@@ -19,7 +18,6 @@ const nav = [
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/events", label: "Events", icon: Trophy },
   { href: "/progress", label: "Progress", icon: TrendingUp },
-  { href: "/coach", label: "Coach", icon: MessageSquare },
 ];
 
 interface SidebarProps {

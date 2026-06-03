@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -37,6 +38,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 };
 
 export function EventCard({ event }: EventCardProps) {
+  const router = useRouter();
   const [generating, setGenerating] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -120,7 +122,10 @@ export function EventCard({ event }: EventCardProps) {
 
   return (
     <>
-    <div className="rounded-xl bg-card overflow-hidden">
+    <div
+      className={cn("rounded-xl bg-card overflow-hidden", event.hasPlan && "cursor-pointer")}
+      onClick={() => { if (event.hasPlan && event.planId) router.push(`/plan/${event.planId}`); }}
+    >
       <div className="h-[3px]" style={{ backgroundColor: accentColor }} />
       <div className="p-5">
         <div className="flex items-start justify-between gap-4">
@@ -165,14 +170,13 @@ export function EventCard({ event }: EventCardProps) {
           </div>
         </div>
 
-        <div className="mt-5 flex items-center gap-2 border-t border-border/50 pt-4">
+        <div className="mt-5 flex items-center gap-2 border-t border-border/50 pt-4" onClick={e => e.stopPropagation()}>
           {event.hasPlan ? (
             <>
-              <Link href={`/plan/${event.planId}`}>
-                <Button size="sm" variant="outline" className="gap-1.5 text-[12px] h-8">
-                  <Zap className="h-3 w-3" /> View Plan
-                </Button>
-              </Link>
+              <Button size="sm" variant="outline" className="gap-1.5 text-[12px] h-8"
+                onClick={() => router.push(`/plan/${event.planId}`)}>
+                <Zap className="h-3 w-3" /> View Plan
+              </Button>
               <Button
                 size="sm"
                 variant="ghost"

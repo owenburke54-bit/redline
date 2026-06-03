@@ -70,6 +70,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Hide scrollbars on mobile widths (iframe preview + real mobile) */
+@media (max-width: 430px) {
+  ::-webkit-scrollbar { display: none; }
+  * { scrollbar-width: none; }
+}
+
 /* Redline utility classes */
 .event-marathon {
   color: var(--marathon-color);

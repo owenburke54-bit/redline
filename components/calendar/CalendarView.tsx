@@ -153,8 +153,46 @@ export function CalendarView({ workouts: initialWorkouts }: CalendarViewProps) {
         </div>
       )}
 
-      {/* Week grid */}
-      <div className="overflow-x-auto">
+      {/* Mobile: vertical day list */}
+      <div className="md:hidden space-y-1">
+        {days.map((day, i) => {
+          const isToday = isSameDayUTC(day, todayUTC);
+          const dayWorkouts = workoutsByDay[i];
+          return (
+            <div key={i} className="flex gap-3 py-2 border-b border-border/10 last:border-0">
+              <div className="w-11 shrink-0 flex flex-col items-center gap-0.5 pt-0.5">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/40">
+                  {DAY_LABELS[i]}
+                </p>
+                <div className={cn(
+                  "h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold",
+                  isToday ? "bg-primary text-primary-foreground" : "text-foreground/70"
+                )}>
+                  {day.getUTCDate()}
+                </div>
+              </div>
+              <div className="flex-1 space-y-1.5 min-w-0">
+                {dayWorkouts.length === 0 ? (
+                  <div className="flex items-center h-7">
+                    <span className="text-[10px] text-muted-foreground/25">Rest</span>
+                  </div>
+                ) : (
+                  dayWorkouts.map(workout => (
+                    <WorkoutCard
+                      key={workout.id}
+                      workout={workout}
+                      onClick={() => setSelectedWorkout(workout)}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: 7-column grid */}
+      <div className="hidden md:block overflow-x-auto">
         <div className="grid grid-cols-7 gap-2 min-w-[560px]">
           {/* Day headers */}
           {days.map((day, i) => {
