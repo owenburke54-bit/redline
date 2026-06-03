@@ -15,11 +15,19 @@ export function formatDate(date: Date | string): string {
 }
 
 export function daysUntil(date: Date | string): number {
-  const now = new Date();
-  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  // Use Eastern time for "today" so the counter doesn't flip at midnight UTC (8 PM EDT / 7 PM EST)
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const y = parseInt(parts.find(p => p.type === "year")!.value);
+  const mo = parseInt(parts.find(p => p.type === "month")!.value) - 1;
+  const d = parseInt(parts.find(p => p.type === "day")!.value);
+  const todayEst = Date.UTC(y, mo, d);
+
   const t = new Date(date);
   const targetUtc = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
-  return Math.ceil((targetUtc - todayUtc) / (1000 * 60 * 60 * 24));
+  return Math.ceil((targetUtc - todayEst) / (1000 * 60 * 60 * 24));
 }
 
 export function weeksUntil(date: Date | string): number {

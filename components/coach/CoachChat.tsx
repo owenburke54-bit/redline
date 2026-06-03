@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Loader2, Zap } from "lucide-react";
+import { Send, Loader2, Zap, Mic, MicOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Message {
   role: "user" | "assistant";
@@ -16,8 +17,11 @@ export function CoachChat() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [ready, setReady] = useState(false);
+  const [listening, setListening] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     const pending = localStorage.getItem("coachPendingQuestion");
@@ -34,6 +38,47 @@ export function CoachChat() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Clean up speech recognition on unmount
+  useEffect(() => {
+    return () => { recognitionRef.current?.abort(); };
+  }, []);
+
+  function toggleVoice() {
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+
+    if (!SR) {
+      toast.error("Voice input isn't supported in this browser. Try Chrome or Edge.");
+      return;
+    }
+
+    const recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => { setListening(false); };
+
+    recognition.onresult = (event: { results: { [k: number]: { [k: number]: { transcript: string } } } }) => {
+      const transcript = Array.from(Object.values(event.results))
+        .map((r: { [k: number]: { transcript: string } }) => r[0].transcript)
+        .join("");
+      setInput(transcript);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }
 
   async function streamResponse(msgs: Message[], isInitial = false) {
     setStreaming(true);
@@ -84,6 +129,12 @@ export function CoachChat() {
   async function sendMessage() {
     const text = input.trim();
     if (!text || streaming || !ready) return;
+
+    // Stop voice if still going
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+    }
 
     const userMsg: Message = { role: "user", content: text };
     const updatedMsgs = [...messages, userMsg];
@@ -151,11 +202,35 @@ export function CoachChat() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={ready ? "Ask your coach anything…" : "Coach is loading…"}
+          placeholder={
+            listening
+              ? "Listening…"
+              : ready
+              ? "Ask your coach anything… or tap the mic"
+              : "Coach is loading…"
+          }
           rows={2}
-          className="resize-none flex-1"
+          className={cn("resize-none flex-1", listening && "border-red-500/50")}
           disabled={!ready || streaming}
         />
+
+        {/* Voice button */}
+        <Button
+          size="sm"
+          variant={listening ? "destructive" : "outline"}
+          onClick={toggleVoice}
+          disabled={!ready || streaming}
+          className="h-[60px] px-3"
+          title={listening ? "Stop recording" : "Voice input"}
+        >
+          {listening ? (
+            <MicOff className="h-3.5 w-3.5 animate-pulse" />
+          ) : (
+            <Mic className="h-3.5 w-3.5" />
+          )}
+        </Button>
+
+        {/* Send button */}
         <Button
           size="sm"
           onClick={sendMessage}
@@ -169,6 +244,12 @@ export function CoachChat() {
           )}
         </Button>
       </div>
+
+      {listening && (
+        <p className="text-[10px] text-red-400 text-center mt-1.5 animate-pulse">
+          Listening — speak now, then tap mic again or press Send
+        </p>
+      )}
     </div>
   );
 }

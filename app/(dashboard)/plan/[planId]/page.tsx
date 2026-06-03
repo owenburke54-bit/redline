@@ -7,6 +7,7 @@ import { ResolveConflictsButton } from "@/components/plan/ResolveConflictsButton
 import { PlanStatusToggle } from "@/components/plan/PlanStatusToggle";
 import { RestoreTemplateButton } from "@/components/plan/RestoreTemplateButton";
 import { Trophy, Target, CalendarDays } from "lucide-react";
+import { daysUntil } from "@/lib/utils";
 import Link from "next/link";
 
 const KEY_SESSION_ORDER = ["RACE", "HYROX_SIM", "LONG_RUN", "INTERVALS", "TEMPO", "HYROX_STATION_WORK", "STRENGTH"];
@@ -133,8 +134,8 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
     }
   }
 
-  // Days to event
-  const daysOut = Math.ceil((plan.event.date.getTime() - now.getTime()) / 86400000);
+  // Days to event — use Eastern time so counter doesn't flip at midnight UTC (8 PM EDT)
+  const daysOut = daysUntil(plan.event.date);
 
   const TEMPLATE_LABELS: Record<string, string> = {
     HAL_HIGDON_NOVICE: "Hal Higdon Novice",
