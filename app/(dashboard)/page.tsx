@@ -139,15 +139,16 @@ export default async function DashboardPage() {
     <div className="max-w-3xl space-y-8 md:space-y-12">
       {/* Greeting */}
       <div>
-        <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/50 uppercase mb-2">
+        <p className="text-[14px] font-medium text-muted-foreground/60 mb-1">
           {getTimeOfDay()}
         </p>
-        <h1 className="text-[3.25rem] font-black tracking-tight leading-none text-foreground">
+        <h1 className="text-[2.5rem] font-black tracking-tight leading-none text-foreground">
           {user?.name?.split(" ")[0] ?? "Athlete"}.
         </h1>
-        <p className="text-[13px] text-muted-foreground mt-2">
+        <p className="text-[12px] text-muted-foreground/50 mt-2">
           Dedication score —{" "}
           <span className="text-primary font-bold">{user?.dedicationScore}/10</span>
+          <span className="text-muted-foreground/30 ml-1.5">· how hard you want to push this training block</span>
         </p>
       </div>
 
@@ -427,8 +428,12 @@ function getCoachNudge({
 }
 
 function getTimeOfDay(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
+  // Use Eastern time — server runs UTC on Vercel
+  const hour = parseInt(
+    new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: "America/New_York" }).format(new Date()),
+    10
+  );
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
   return "Good evening";
 }

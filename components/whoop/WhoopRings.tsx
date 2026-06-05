@@ -31,9 +31,9 @@ function RingGauge({
   // Compute drop-shadow for recovery ring based on color tier
   let dropShadow = "";
   if (isRecovery && value != null) {
-    if (value >= 70) {
+    if (value >= 67) {
       dropShadow = "drop-shadow(0 0 8px rgba(0,232,122,0.4))";
-    } else if (value >= 50) {
+    } else if (value >= 34) {
       dropShadow = "drop-shadow(0 0 8px rgba(255,184,0,0.3))";
     } else {
       dropShadow = "drop-shadow(0 0 8px rgba(255,45,45,0.3))";
@@ -123,16 +123,17 @@ export function WhoopRings({
   staleLabel,
   recentActivities,
 }: WhoopRingsProps) {
+  // WHOOP official thresholds: green ≥67%, yellow 34–66%, red <34%
   const rColor =
     recoveryScore == null
       ? "rgba(255,255,255,0.2)"
-      : recoveryScore >= 70
+      : recoveryScore >= 67
       ? "#00E87A"
-      : recoveryScore >= 50
+      : recoveryScore >= 34
       ? "#FFB800"
       : "#FF2D2D";
 
-  const strainColor = "#FF5500";
+  const strainColor = "#4A9EFF"; // WHOOP uses blue for strain
 
   const sleepColor =
     sleepScore == null

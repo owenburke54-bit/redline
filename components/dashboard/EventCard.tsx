@@ -147,7 +147,7 @@ export function EventCard({ event }: EventCardProps) {
 
             <div className="flex items-center gap-3 mt-2 flex-wrap">
               <span className="text-[11px] text-muted-foreground">
-                {new Date(event.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                {new Date(event.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}
               </span>
               {event.location && (
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">

@@ -199,7 +199,7 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
           <div className="flex items-center gap-4 mt-3 flex-wrap">
             <span className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
               <CalendarDays className="h-3.5 w-3.5" />
-              {plan.event.date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              {plan.event.date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}
             </span>
             {plan.event.goalTime && (
               <span className="flex items-center gap-1.5 text-[12px] font-bold" style={{ color: accentColor }}>

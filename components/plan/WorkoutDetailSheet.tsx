@@ -359,7 +359,7 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
         <div
           className="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl overflow-hidden animate-sheet-up"
           style={{
-            background: "hsl(var(--card))",
+            background: "var(--color-bg-surface, #111111)",
             border: "1px solid rgba(255,255,255,0.1)",
             borderBottom: "none",
             maxHeight: "90vh",
