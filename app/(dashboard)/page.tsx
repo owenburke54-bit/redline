@@ -11,6 +11,7 @@ import { WeeklyCheckinCard } from "@/components/dashboard/WeeklyCheckinCard";
 import { CoachNudgeCard } from "@/components/coach/CoachNudgeCard";
 import { WeeklyBriefCard } from "@/components/dashboard/WeeklyBriefCard";
 import { DedicationScoreButton } from "@/components/dashboard/DedicationScoreButton";
+import { PartnerSection } from "@/components/partner/PartnerSection";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -291,6 +292,9 @@ export default async function DashboardPage() {
           </div>
         </section>
       )}
+
+      {/* Training partner */}
+      <PartnerSection />
 
       {/* Weekly brief */}
       {events.length > 0 && (

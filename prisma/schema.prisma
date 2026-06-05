@@ -42,6 +42,8 @@ model User {
   checkins              WeeklyCheckin[]
   athleteProfile        AthleteProfile?
   weeklyBriefs          WeeklyBrief[]
+  partnershipsSent      Partnership[]   @relation("PartnerSent")
+  partnershipsReceived  Partnership[]   @relation("PartnerReceived")
 }
 
 model Account {
@@ -344,6 +346,24 @@ model GarminDailySummary {
   createdAt DateTime @default(now())
 
   @@unique([userId, date])
+}
+
+model Partnership {
+  id          String        @id @default(cuid())
+  requesterId String
+  requester   User          @relation("PartnerSent", fields: [requesterId], references: [id], onDelete: Cascade)
+  partnerId   String?
+  partner     User?         @relation("PartnerReceived", fields: [partnerId], references: [id], onDelete: SetNull)
+  inviteEmail String
+  status      PartnerStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+enum PartnerStatus {
+  PENDING
+  ACTIVE
+  DECLINED
 }
 
 model WeeklyBrief {
