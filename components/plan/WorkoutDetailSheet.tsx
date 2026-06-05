@@ -107,6 +107,77 @@ function CollapsibleSection({ label, children }: { label: string; children: Reac
   );
 }
 
+// ─── Exercise card (collapsed by default) ────────────────────────────────────
+
+function ExerciseCard({ ex }: { ex: StrengthExercise }) {
+  const [open, setOpen] = useState(false);
+  const hasDetails = !!(ex.load || ex.tempo || ex.rest || ex.stationTarget || ex.coachingCue);
+
+  return (
+    <div
+      className="rounded-lg overflow-hidden"
+      style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)" }}
+    >
+      {/* Always-visible row */}
+      <button
+        type="button"
+        onClick={() => hasDetails && setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left"
+      >
+        <p className="text-[14px] font-bold leading-snug flex-1">{ex.exercise}</p>
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className="text-[11px] font-bold tabular-nums px-2 py-0.5 rounded"
+            style={{ background: "rgba(255,85,0,0.2)", color: "#FF5500" }}
+          >
+            {ex.sets}×{ex.reps}
+          </span>
+          {hasDetails && (
+            <span
+              className="text-[10px] text-muted-foreground/30 transition-transform duration-150"
+              style={{ display: "inline-block", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+            >
+              ▾
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Expandable details */}
+      {open && (
+        <div className="px-3 pb-3 space-y-1.5" style={{ borderTop: "1px solid rgba(168,85,247,0.15)" }}>
+          {ex.load && (
+            <p className="text-[12px] text-muted-foreground/60 pt-2">{ex.load}</p>
+          )}
+          <div className="flex flex-wrap gap-1.5">
+            {ex.tempo && (
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)" }}>
+                {ex.tempo}
+              </span>
+            )}
+            {ex.rest && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
+                rest {ex.rest}
+              </span>
+            )}
+          </div>
+          {ex.stationTarget && (
+            <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded"
+              style={{ background: "rgba(0,232,122,0.12)", color: "#00E87A", border: "1px solid rgba(0,232,122,0.25)" }}>
+              → {ex.stationTarget}
+            </span>
+          )}
+          {ex.coachingCue && (
+            <p className="text-[12px] text-muted-foreground/50 italic leading-snug">{ex.coachingCue}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Strength blocks renderer ─────────────────────────────────────────────────
 
 function StrengthSessionView({ session }: { session: StrengthSession }) {
@@ -153,62 +224,7 @@ function StrengthSessionView({ session }: { session: StrengthSession }) {
             </p>
           )}
           {(block.exercises ?? []).map((ex, ei) => (
-            <div
-              key={ei}
-              className="rounded-lg px-3 py-2.5 space-y-1.5"
-              style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)" }}
-            >
-              {/* Exercise name + sets×reps badge */}
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-[15px] font-bold leading-snug">{ex.exercise}</p>
-                <span
-                  className="shrink-0 text-[11px] font-bold tabular-nums px-2 py-0.5 rounded"
-                  style={{ background: "rgba(255,85,0,0.2)", color: "#FF5500" }}
-                >
-                  {ex.sets}×{ex.reps}
-                </span>
-              </div>
-
-              {/* Load */}
-              {ex.load && (
-                <p className="text-[12px] text-muted-foreground/60">{ex.load}</p>
-              )}
-
-              {/* Tempo + rest pills */}
-              <div className="flex flex-wrap gap-1.5">
-                {ex.tempo && (
-                  <span
-                    className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-                    style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)" }}
-                  >
-                    {ex.tempo}
-                  </span>
-                )}
-                {ex.rest && (
-                  <span
-                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                    style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}
-                  >
-                    rest {ex.rest}
-                  </span>
-                )}
-              </div>
-
-              {/* Station target badge */}
-              {ex.stationTarget && (
-                <span
-                  className="inline-block text-[10px] font-bold px-2 py-0.5 rounded"
-                  style={{ background: "rgba(0,232,122,0.12)", color: "#00E87A", border: "1px solid rgba(0,232,122,0.25)" }}
-                >
-                  → {ex.stationTarget}
-                </span>
-              )}
-
-              {/* Coaching cue */}
-              {ex.coachingCue && (
-                <p className="text-[12px] text-muted-foreground/50 italic leading-snug">{ex.coachingCue}</p>
-              )}
-            </div>
+            <ExerciseCard key={ei} ex={ex} />
           ))}
         </div>
       ))}
@@ -281,14 +297,30 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
     }
   }, [workout?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Lock body scroll when sheet is open
+  // Lock body scroll without jumping — iOS requires position:fixed with saved scroll position
   useEffect(() => {
     if (workout) {
+      const scrollY = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
       document.body.style.overflow = "hidden";
     } else {
+      const top = document.body.style.top;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
       document.body.style.overflow = "";
+      window.scrollTo(0, parseInt(top || "0") * -1);
     }
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      const top = document.body.style.top;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      document.body.style.overflow = "";
+      if (top) window.scrollTo(0, parseInt(top) * -1);
+    };
   }, [workout]);
 
   const save = useCallback(async () => {

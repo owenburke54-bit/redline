@@ -28,9 +28,9 @@ export function WhoopConnectCard({
   const recoveryColor =
     recoveryScore == null
       ? "var(--muted-foreground)"
-      : recoveryScore >= 70
+      : recoveryScore >= 67
       ? "#00E87A"
-      : recoveryScore >= 50
+      : recoveryScore >= 34
       ? "#FFB800"
       : "#FF2D2D";
 
@@ -91,9 +91,9 @@ export function WhoopConnectCard({
             )}
           </div>
           <div className="text-xs text-muted-foreground leading-relaxed">
-            {recoveryScore >= 70
+            {recoveryScore >= 67
               ? "Ready to train. High-intensity work is appropriate today."
-              : recoveryScore >= 50
+              : recoveryScore >= 34
               ? "Moderate readiness. Avoid stacking hard sessions."
               : "Low recovery. Prioritize easy effort or rest today."}
           </div>

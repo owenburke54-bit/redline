@@ -138,7 +138,35 @@ export function predictFinishTime(params: {
 }): PredictedTime | null {
   const { eventType, thresholdSecsPerMile, avgWeeklyMiles, runCount, compliancePct } = params;
 
-  if (eventType.startsWith("HYROX")) return null;
+  // HYROX prediction: 8km running + 8 stations
+  if (eventType.startsWith("HYROX")) {
+    if (!thresholdSecsPerMile || runCount < 5) return null;
+    // Convert threshold (proxy for ~10K pace) to per-km
+    const thresholdSecsPerKm = thresholdSecsPerMile / 1.609;
+    // HYROX 1km segments run ~20 sec/km slower than standalone 10K pace (station fatigue)
+    const hyroxKmPace = thresholdSecsPerKm + 20;
+    const runSecs = 8 * hyroxKmPace;
+    // Station time: scales inversely with weekly mileage (fitness proxy)
+    let stationSecs =
+      avgWeeklyMiles >= 35 ? 30 * 60
+      : avgWeeklyMiles >= 25 ? 36 * 60
+      : avgWeeklyMiles >= 15 ? 43 * 60
+      : 50 * 60;
+    // Doubles: stations split between partners (roughly 55% of solo — transitions add time)
+    const isDoubles = eventType.includes("DOUBLE");
+    if (isDoubles) stationSecs = Math.round(stationSecs * 0.55);
+    // Compliance penalty
+    if (compliancePct < 60) stationSecs += 5 * 60;
+    else if (compliancePct < 75) stationSecs += 150;
+    const totalSecs = Math.round(runSecs + stationSecs);
+    return {
+      formatted: secsToHMS(totalSecs),
+      seconds: totalSecs,
+      confidence: runCount >= 15 ? "medium" : "low",
+      basis: `${runCount} runs + station estimate`,
+    };
+  }
+
   const race = RACE_PARAMS[eventType];
   if (!race || !thresholdSecsPerMile || runCount < 5) return null;
 
