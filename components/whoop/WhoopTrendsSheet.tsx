@@ -32,73 +32,193 @@ function recoveryColor(score: number) {
   return "#FF2D2D";
 }
 
-function SparkLine({
+// ─── Sparkline with scale, value labels, and tap highlight ───────────────────
+
+function SparkChart({
   values,
-  max,
+  labels,
   color,
-  height = 48,
+  unit,
+  formatValue,
+  scaleMin,
+  scaleMax,
+  height = 64,
 }: {
   values: number[];
-  max: number;
+  labels: string[];
   color: string | ((v: number) => string);
+  unit: string;
+  formatValue?: (v: number) => string;
+  scaleMin?: number;
+  scaleMax?: number;
   height?: number;
 }) {
-  if (values.length < 2) return null;
-  const w = 100 / (values.length - 1);
-  const points = values.map((v, i) => {
-    const x = i * w;
-    const y = height - (v / max) * (height - 4) - 2;
-    return `${x},${y}`;
-  });
-  const pathD = `M ${points.join(" L ")}`;
-  const lastColor = typeof color === "function" ? color(values[values.length - 1]) : color;
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
+
+  if (values.length === 0) return null;
+
+  const fmt = formatValue ?? ((v: number) => String(Math.round(v)));
+  const dataMin = Math.min(...values);
+  const dataMax = Math.max(...values);
+  const chartMin = scaleMin ?? Math.max(0, dataMin - (dataMax - dataMin) * 0.3);
+  const chartMax = scaleMax ?? dataMax + (dataMax - dataMin) * 0.2;
+  const range = chartMax - chartMin || 1;
+
+  const W = 100; // viewBox units wide
+  const pad = 2;
+  const stepX = values.length > 1 ? (W - pad * 2) / (values.length - 1) : 0;
+
+  function yPos(v: number) {
+    return height - pad - ((v - chartMin) / range) * (height - pad * 2);
+  }
+
+  const points = values.map((v, i) => ({ x: pad + i * stepX, y: yPos(v) }));
+  const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x},${p.y}`).join(" ");
+  const fillD = `${pathD} L ${points[points.length - 1].x},${height} L ${points[0].x},${height} Z`;
+
+  const midVal = (chartMin + chartMax) / 2;
+
+  // Color of the last point (or active point)
+  function pointColor(idx: number) {
+    const c = color;
+    if (typeof c === "function") return c(values[idx]);
+    return c;
+  }
+  const activeColor = pointColor(activeIdx ?? values.length - 1);
 
   return (
-    <svg
-      viewBox={`0 0 100 ${height}`}
-      preserveAspectRatio="none"
-      className="w-full"
-      style={{ height }}
-    >
-      {/* Gradient fill */}
-      <defs>
-        <linearGradient id={`grad-${lastColor.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={lastColor} stopOpacity="0.25" />
-          <stop offset="100%" stopColor={lastColor} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path
-        d={`${pathD} L ${(values.length - 1) * w},${height} L 0,${height} Z`}
-        fill={`url(#grad-${lastColor.replace("#", "")})`}
-      />
-      <path d={pathD} stroke={lastColor} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      {/* Last point dot */}
-      {(() => {
-        const last = values[values.length - 1];
-        const x = (values.length - 1) * w;
-        const y = height - (last / max) * (height - 4) - 2;
-        return <circle cx={x} cy={y} r="2.5" fill={lastColor} />;
-      })()}
-    </svg>
+    <div>
+      <div className="flex gap-2">
+        {/* Y-axis scale */}
+        <div className="flex flex-col justify-between shrink-0 text-right" style={{ width: 28, height }}>
+          <span className="text-[9px] tabular-nums leading-none" style={{ color: "rgba(255,255,255,0.3)" }}>
+            {fmt(chartMax)}{unit}
+          </span>
+          <span className="text-[9px] tabular-nums leading-none" style={{ color: "rgba(255,255,255,0.18)" }}>
+            {fmt(midVal)}{unit}
+          </span>
+          <span className="text-[9px] tabular-nums leading-none" style={{ color: "rgba(255,255,255,0.18)" }}>
+            {fmt(chartMin)}{unit}
+          </span>
+        </div>
+
+        {/* Chart area */}
+        <div className="flex-1 relative" style={{ height }}>
+          <svg
+            viewBox={`0 0 ${W} ${height}`}
+            preserveAspectRatio="none"
+            className="absolute inset-0 w-full h-full"
+          >
+            <defs>
+              <linearGradient id={`g-${activeColor.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={activeColor} stopOpacity="0.3" />
+                <stop offset="100%" stopColor={activeColor} stopOpacity="0" />
+              </linearGradient>
+              {/* Grid lines */}
+            </defs>
+
+            {/* Horizontal grid lines */}
+            {[chartMin, midVal, chartMax].map((v, i) => (
+              <line
+                key={i}
+                x1={0} y1={yPos(v)} x2={W} y2={yPos(v)}
+                stroke="rgba(255,255,255,0.05)" strokeWidth="0.5"
+              />
+            ))}
+
+            {/* Fill */}
+            <path d={fillD} fill={`url(#g-${activeColor.replace("#", "")})`} />
+
+            {/* Line */}
+            <path d={pathD} stroke={activeColor} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+
+            {/* Data point dots — shown for active, and always for last point */}
+            {points.map((p, i) => {
+              const isActive = i === activeIdx;
+              const isLast = i === values.length - 1 && activeIdx === null;
+              if (!isActive && !isLast) return null;
+              const c = pointColor(i);
+              return (
+                <g key={i}>
+                  <circle cx={p.x} cy={p.y} r="3.5" fill={c} />
+                  <circle cx={p.x} cy={p.y} r="5.5" fill={c} fillOpacity="0.2" />
+                </g>
+              );
+            })}
+
+            {/* Invisible tap targets */}
+            {points.map((p, i) => (
+              <rect
+                key={i}
+                x={p.x - stepX / 2}
+                y={0}
+                width={stepX}
+                height={height}
+                fill="transparent"
+                style={{ cursor: "pointer" }}
+                onMouseEnter={() => setActiveIdx(i)}
+                onMouseLeave={() => setActiveIdx(null)}
+                onClick={() => setActiveIdx(activeIdx === i ? null : i)}
+              />
+            ))}
+          </svg>
+        </div>
+      </div>
+
+      {/* Day labels + values row */}
+      <div className="flex mt-2" style={{ marginLeft: 36 }}>
+        {labels.map((l, i) => {
+          const isActive = i === activeIdx;
+          const c = pointColor(i);
+          return (
+            <div
+              key={i}
+              className="flex-1 flex flex-col items-center gap-0.5"
+              style={{ cursor: "pointer" }}
+              onMouseEnter={() => setActiveIdx(i)}
+              onMouseLeave={() => setActiveIdx(null)}
+              onClick={() => setActiveIdx(activeIdx === i ? null : i)}
+            >
+              <span
+                className="text-[10px] tabular-nums font-semibold"
+                style={{ color: isActive ? c : "rgba(255,255,255,0.45)" }}
+              >
+                {fmt(values[i])}{unit}
+              </span>
+              <span
+                className="text-[9px] font-medium"
+                style={{ color: isActive ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.22)" }}
+              >
+                {l}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
+
+// ─── Card wrapper ─────────────────────────────────────────────────────────────
 
 function TrendCard({
   label,
   values,
   labels,
-  max,
   color,
   unit,
   formatValue,
+  scaleMin,
+  scaleMax,
 }: {
   label: string;
   values: number[];
   labels: string[];
-  max: number;
   color: string | ((v: number) => string);
   unit: string;
   formatValue?: (v: number) => string;
+  scaleMin?: number;
+  scaleMax?: number;
 }) {
   if (values.length === 0) {
     return (
@@ -109,30 +229,37 @@ function TrendCard({
     );
   }
 
+  const fmt = formatValue ?? ((v: number) => String(Math.round(v)));
   const latest = values[values.length - 1];
   const latestColor = typeof color === "function" ? color(latest) : color;
-  const fmt = formatValue ?? ((v: number) => String(Math.round(v)));
 
   return (
     <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-3">
         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40">{label}</p>
         <div className="text-right">
-          <span className="text-[1.25rem] font-black leading-none tabular-nums" style={{ color: latestColor }}>
+          <span className="text-[1.3rem] font-black leading-none tabular-nums" style={{ color: latestColor }}>
             {fmt(latest)}
           </span>
           <span className="text-[10px] text-muted-foreground/40 ml-0.5">{unit}</span>
+          <p className="text-[9px] text-muted-foreground/25 mt-0.5">today</p>
         </div>
       </div>
-      <SparkLine values={values} max={max} color={color} height={44} />
-      <div className="flex justify-between mt-1">
-        {labels.map((l, i) => (
-          <span key={i} className="text-[9px] text-muted-foreground/25">{l}</span>
-        ))}
-      </div>
+      <SparkChart
+        values={values}
+        labels={labels}
+        color={color}
+        unit={unit}
+        formatValue={formatValue}
+        scaleMin={scaleMin}
+        scaleMax={scaleMax}
+        height={56}
+      />
     </div>
   );
 }
+
+// ─── Main sheet ───────────────────────────────────────────────────────────────
 
 export function WhoopTrendsSheet({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<TrendsData | null>(null);
@@ -144,7 +271,6 @@ export function WhoopTrendsSheet({ onClose }: { onClose: () => void }) {
       .then(d => setData(d))
       .finally(() => setLoading(false));
 
-    // Lock scroll
     const scrollY = window.scrollY;
     document.body.style.position = "fixed";
     document.body.style.top = `-${scrollY}px`;
@@ -158,14 +284,21 @@ export function WhoopTrendsSheet({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
-  const recoveryValues = (data?.recovery ?? []).map(r => r.recoveryScore);
-  const recoveryLabels = (data?.recovery ?? []).map(r => dayLabel(r.date));
-  const sleepValues = (data?.recovery ?? []).filter(r => r.sleepScore != null).map(r => r.sleepScore as number);
-  const sleepLabels = (data?.recovery ?? []).filter(r => r.sleepScore != null).map(r => dayLabel(r.date));
-  const strainValues = (data?.strain ?? []).map(s => s.strain);
-  const strainLabels = (data?.strain ?? []).map(s => dayLabel(s.date));
-  const hrvValues = (data?.recovery ?? []).filter(r => r.hrv != null).map(r => r.hrv as number);
-  const hrvLabels = (data?.recovery ?? []).filter(r => r.hrv != null).map(r => dayLabel(r.date));
+  const recoveryDays = data?.recovery ?? [];
+  const recoveryValues = recoveryDays.map(r => r.recoveryScore);
+  const recoveryLabels = recoveryDays.map(r => dayLabel(r.date));
+
+  const sleepDays = recoveryDays.filter(r => r.sleepScore != null);
+  const sleepValues = sleepDays.map(r => r.sleepScore as number);
+  const sleepLabels = sleepDays.map(r => dayLabel(r.date));
+
+  const strainDays = data?.strain ?? [];
+  const strainValues = strainDays.map(s => s.strain);
+  const strainLabels = strainDays.map(s => dayLabel(s.date));
+
+  const hrvDays = recoveryDays.filter(r => r.hrv != null);
+  const hrvValues = hrvDays.map(r => r.hrv as number);
+  const hrvLabels = hrvDays.map(r => dayLabel(r.date));
 
   return (
     <>
@@ -176,9 +309,10 @@ export function WhoopTrendsSheet({ onClose }: { onClose: () => void }) {
           background: "var(--color-bg-surface, #111111)",
           border: "1px solid rgba(255,255,255,0.1)",
           borderBottom: "none",
-          maxHeight: "85vh",
+          maxHeight: "88vh",
         }}
       >
+        {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           <div>
             <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-muted-foreground/40">WHOOP</p>
@@ -189,11 +323,12 @@ export function WhoopTrendsSheet({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
+        {/* Charts */}
         <div className="overflow-y-auto px-5 py-4 space-y-3">
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3].map(i => (
-                <div key={i} className="rounded-xl h-24 animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
+                <div key={i} className="rounded-xl h-32 animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
               ))}
             </div>
           ) : (
@@ -202,33 +337,35 @@ export function WhoopTrendsSheet({ onClose }: { onClose: () => void }) {
                 label="Recovery"
                 values={recoveryValues}
                 labels={recoveryLabels}
-                max={100}
                 color={recoveryColor}
                 unit="%"
+                scaleMin={0}
+                scaleMax={100}
               />
               <TrendCard
                 label="Strain"
                 values={strainValues}
                 labels={strainLabels}
-                max={21}
                 color="#4A9EFF"
                 unit=""
                 formatValue={v => v.toFixed(1)}
+                scaleMin={0}
+                scaleMax={21}
               />
               <TrendCard
                 label="Sleep Performance"
                 values={sleepValues}
                 labels={sleepLabels}
-                max={100}
                 color="#A855F7"
                 unit="%"
+                scaleMin={0}
+                scaleMax={100}
               />
               {hrvValues.length > 0 && (
                 <TrendCard
                   label="HRV"
                   values={hrvValues}
                   labels={hrvLabels}
-                  max={Math.max(...hrvValues) * 1.2}
                   color="#00E87A"
                   unit="ms"
                 />

@@ -71,11 +71,30 @@ const WORKOUT_TIPS: Partial<Record<string, string>> = {
   CROSS_TRAIN: "Keep it truly easy — heart rate in Zone 1 to low Zone 2. This is active recovery, not a second workout.",
 };
 
+const HYROX_RUN_MI = 4.971; // 8 km run leg
+
 const EVENT_DISTANCES_MI: Record<string, number> = {
   MARATHON: 26.2,
   HALF_MARATHON: 13.1,
   FIVE_K: 3.107,
   TEN_K: 6.214,
+  // HYROX — goal time covers both run + stations; run leg = 8 km
+  HYROX: HYROX_RUN_MI,
+  HYROX_WOMENS: HYROX_RUN_MI,
+  HYROX_DOUBLES: HYROX_RUN_MI,
+  HYROX_DOUBLES_MIXED: HYROX_RUN_MI,
+  HYROX_DOUBLES_MENS: HYROX_RUN_MI,
+  HYROX_DOUBLES_WOMENS: HYROX_RUN_MI,
+};
+
+// For HYROX, the run leg is ~50% of total goal time (stations make up the other half)
+const EVENT_RUN_FRACTION: Partial<Record<string, number>> = {
+  HYROX: 0.5,
+  HYROX_WOMENS: 0.5,
+  HYROX_DOUBLES: 0.55,
+  HYROX_DOUBLES_MIXED: 0.55,
+  HYROX_DOUBLES_MENS: 0.55,
+  HYROX_DOUBLES_WOMENS: 0.55,
 };
 
 const ZONE_PACE_OFFSETS: Record<number, number> = {
@@ -92,6 +111,8 @@ const DEFAULT_ZONE: Partial<Record<string, number>> = {
   LONG_RUN: 2,
   TEMPO: 3,
   INTERVALS: 5,
+  HYROX_STATION_WORK: 3,
+  HYROX_SIM: 4,
 };
 
 function parseGoalTimeSecs(s: string): number | null {
@@ -123,7 +144,8 @@ function getTargetPace(
   if (!distMi) return null;
   const totalSecs = parseGoalTimeSecs(goalTime);
   if (!totalSecs) return null;
-  const goalPacePerMile = totalSecs / distMi;
+  const runFraction = EVENT_RUN_FRACTION[eventType] ?? 1;
+  const goalPacePerMile = (totalSecs * runFraction) / distMi;
   const offset = ZONE_PACE_OFFSETS[zone];
   if (offset === undefined) return null;
   const zonePace = goalPacePerMile + offset;
