@@ -100,6 +100,7 @@ export function buildCoachSystemPrompt(params: {
   stravaZoneContext?: string;
   activeConflicts: string[];
   classSchedule?: { studios: { id: string; name: string; days: number[] }[] } | null;
+  currentDate?: string;
   recentTraining?: {
     completedWorkouts: Array<{
       date: string;
@@ -117,7 +118,7 @@ export function buildCoachSystemPrompt(params: {
     whoopTrend: Array<{ date: string; score: number; hrv: number | null }>;
   };
 }): string {
-  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, stravaZoneContext, activeConflicts, classSchedule, recentTraining } = params;
+  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, stravaZoneContext, activeConflicts, classSchedule, currentDate, recentTraining } = params;
 
   const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const classScheduleNote = classSchedule?.studios && classSchedule.studios.length > 0
@@ -213,6 +214,7 @@ ${whoopLines}`;
   })() : "";
 
   return `You are a direct, experienced endurance and functional fitness coach working with ${athleteName}.
+${currentDate ? `Today is ${currentDate}.` : ""}
 
 ATHLETE PROFILE:
 ${profileSummary}
@@ -247,8 +249,8 @@ COACHING GUIDELINES:
 - Respect the dedication score. A 9/10 athlete doesn't need to be told to take it easy unless data says otherwise.
 - Wearable recovery data: if recovery is red/poor (<34% WHOOP or low body battery), suggest shifting or reducing today's hard session without waiting to be asked. If green/good (≥67% WHOOP), green-light intensity.
 - High-strain other activities (soccer, tennis, barre, CrossFit) count toward weekly load. Don't schedule hard structured workouts on top of high-strain days.
-- For running pace guidance, use pace per mile. All distances are in miles. When asked about easy, tempo, or interval pace, cite the athlete's specific Strava-derived zone ranges if available; otherwise reference the zone system above.
-- The 80/20 rule is non-negotiable: if the athlete is doing more than 20% of weekly mileage at Zone 3+, the easy runs are too fast. Address this directly.
+- For running pace guidance, use pace per mile. All distances are in miles. When asked about easy, tempo, or interval pace, always give a specific min/mile range — never say "comfortable" or "conversational" without attaching a number. If Strava zone data is available use those exact numbers; if not, calculate from their goal race pace: Easy = goal marathon pace + 60-90sec/mi, Tempo = goal marathon pace - 15-30sec/mi, Intervals (VO2max) = 5K-10K goal pace. State the number first, then the feel cue.
+- The 80/20 rule is non-negotiable: if the athlete is doing more than 20% of weekly mileage at Zone 3+, the easy runs are too fast. Tell them their easy pace ceiling in min/mile and address this directly.
 - Phase-aware coaching: athletes in base phase need volume, not intensity. In peak phase, quality sessions matter more. In taper, nothing they do in the final 2 weeks will make them fitter — only more or less rested.`;
 }
 

@@ -219,11 +219,17 @@ export async function POST(req: NextRequest) {
     whoopTrend,
   };
 
+  const currentDate = new Date().toLocaleDateString("en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+    timeZone: "America/New_York",
+  });
+
   const systemPrompt = buildCoachSystemPrompt({
     athleteName: user?.name?.split(" ")[0] ?? "Athlete",
     dedicationScore: user?.dedicationScore ?? 7,
     profileSummary,
     activeEvents,
+    currentDate,
     currentWeekWorkouts: weekWorkoutsSummary,
     recentActivity: stravaConnected
       ? zones.runCount > 0

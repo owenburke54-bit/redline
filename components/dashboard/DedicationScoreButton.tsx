@@ -16,6 +16,16 @@ export function DedicationScoreButton({ score }: { score: number }) {
   const [saving, setSaving] = useState(false);
   const router = useRouter();
 
+  function openSheet() {
+    document.body.style.overflow = "hidden";
+    setOpen(true);
+  }
+
+  function closeSheet() {
+    document.body.style.overflow = "";
+    setOpen(false);
+  }
+
   async function save(val: number) {
     setSaving(true);
     try {
@@ -26,7 +36,7 @@ export function DedicationScoreButton({ score }: { score: number }) {
       });
       if (!res.ok) throw new Error();
       setSelected(val);
-      setOpen(false);
+      closeSheet();
       router.refresh();
       toast.success(`Dedication score updated to ${val}/10`);
     } catch {
@@ -39,7 +49,7 @@ export function DedicationScoreButton({ score }: { score: number }) {
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={openSheet}
         className="text-left group"
       >
         <span className="text-[12px] text-muted-foreground/50">
@@ -55,7 +65,7 @@ export function DedicationScoreButton({ score }: { score: number }) {
           <div
             className="fixed inset-0 z-40"
             style={{ background: "rgba(0,0,0,0.7)" }}
-            onClick={() => setOpen(false)}
+            onClick={closeSheet}
           />
           {/* Sheet */}
           <div

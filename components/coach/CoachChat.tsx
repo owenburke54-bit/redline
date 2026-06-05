@@ -7,6 +7,57 @@ import { Send, Loader2, Zap, Mic, MicOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+function parseInline(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const regex = /\*\*(.+?)\*\*|\*(.+?)\*/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    if (match[1]) parts.push(<strong key={match.index} className="font-semibold text-foreground">{match[1]}</strong>);
+    else if (match[2]) parts.push(<em key={match.index}>{match[2]}</em>);
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts;
+}
+
+function MarkdownMessage({ content }: { content: string }) {
+  const lines = content.split("\n");
+  const nodes: React.ReactNode[] = [];
+  let bullets: string[] = [];
+
+  function flushBullets() {
+    if (bullets.length === 0) return;
+    nodes.push(
+      <ul key={`ul-${nodes.length}`} className="list-disc pl-4 space-y-0.5 my-1">
+        {bullets.map((b, i) => <li key={i}>{parseInline(b)}</li>)}
+      </ul>
+    );
+    bullets = [];
+  }
+
+  for (const line of lines) {
+    if (line.startsWith("- ") || line.startsWith("• ")) {
+      bullets.push(line.slice(2));
+    } else {
+      flushBullets();
+      if (line === "") {
+        nodes.push(<br key={`br-${nodes.length}`} />);
+      } else if (line.startsWith("### ")) {
+        nodes.push(<p key={`h-${nodes.length}`} className="font-semibold text-foreground mt-1">{parseInline(line.slice(4))}</p>);
+      } else if (line.startsWith("## ") || line.startsWith("# ")) {
+        const text = line.replace(/^#+\s/, "");
+        nodes.push(<p key={`h-${nodes.length}`} className="font-bold text-foreground mt-1">{parseInline(text)}</p>);
+      } else {
+        nodes.push(<p key={`p-${nodes.length}`}>{parseInline(line)}</p>);
+      }
+    }
+  }
+  flushBullets();
+  return <div className="space-y-0.5">{nodes}</div>;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -186,6 +237,8 @@ export function CoachChat() {
                   <span className="animate-bounce" style={{ animationDelay: "150ms" }}>·</span>
                   <span className="animate-bounce" style={{ animationDelay: "300ms" }}>·</span>
                 </span>
+              ) : msg.role === "assistant" ? (
+                <MarkdownMessage content={msg.content} />
               ) : (
                 <span className="whitespace-pre-wrap">{msg.content}</span>
               )}
