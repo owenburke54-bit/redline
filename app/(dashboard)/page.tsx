@@ -10,6 +10,7 @@ import { TodayWorkouts } from "@/components/dashboard/TodayWorkouts";
 import { WeeklyCheckinCard } from "@/components/dashboard/WeeklyCheckinCard";
 import { CoachNudgeCard } from "@/components/coach/CoachNudgeCard";
 import { WeeklyBriefCard } from "@/components/dashboard/WeeklyBriefCard";
+import { DedicationScoreButton } from "@/components/dashboard/DedicationScoreButton";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -138,18 +139,14 @@ export default async function DashboardPage() {
   return (
     <div className="max-w-3xl space-y-8 md:space-y-12">
       {/* Greeting */}
-      <div>
-        <p className="text-[14px] font-medium text-muted-foreground/60 mb-1">
+      <div className="border-b pb-6" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <p className="text-[11px] font-semibold tracking-[0.18em] uppercase mb-2" style={{ color: "rgba(255,255,255,0.25)" }}>
           {getTimeOfDay()}
         </p>
-        <h1 className="text-[2.5rem] font-black tracking-tight leading-none text-foreground">
+        <h1 className="text-[2.75rem] font-black tracking-tight leading-none text-foreground mb-3">
           {user?.name?.split(" ")[0] ?? "Athlete"}.
         </h1>
-        <p className="text-[12px] text-muted-foreground/50 mt-2">
-          Dedication score —{" "}
-          <span className="text-primary font-bold">{user?.dedicationScore}/10</span>
-          <span className="text-muted-foreground/30 ml-1.5">· how hard you want to push this training block</span>
-        </p>
+        <DedicationScoreButton score={user?.dedicationScore ?? 7} />
       </div>
 
       {/* WHOOP recovery */}
