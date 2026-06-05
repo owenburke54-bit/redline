@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertTriangle, MapPin, Clock, Zap, Target, CheckCircle2, XCircle, Pencil, MessageSquare } from "lucide-react";
+import { AlertTriangle, MapPin, Clock, Zap, Target, CheckCircle2, XCircle, Pencil, MessageSquare, ChevronDown } from "lucide-react";
 
 export interface Workout {
   id: string;
@@ -35,6 +35,8 @@ export interface Workout {
   eventName: string;
   goalTime?: string | null;
   scheduledDate: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  strengthBlocks?: any | null;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -84,6 +86,14 @@ const ZONE_PACE_OFFSETS: Record<number, number> = {
   5: -60,
 };
 
+// Default zone when intensityZone is null
+const DEFAULT_ZONE: Partial<Record<string, number>> = {
+  EASY_RUN: 2,
+  LONG_RUN: 2,
+  TEMPO: 3,
+  INTERVALS: 5,
+};
+
 function parseGoalTimeSecs(s: string): number | null {
   const cleaned = s.toLowerCase().replace(/^sub-?\s*/, "").trim();
   const parts = cleaned.split(":").map(Number);
@@ -102,9 +112,13 @@ function secsToMmss(secs: number): string {
 function getTargetPace(
   goalTime: string | null | undefined,
   eventType: string,
-  zone: number | null | undefined
+  zone: number | null | undefined,
+  workoutType?: string
 ): string | null {
-  if (!goalTime || !zone) return null;
+  const effectiveZone = zone ?? (workoutType ? DEFAULT_ZONE[workoutType] : undefined);
+  if (!goalTime || !effectiveZone) return null;
+  // shadow zone with effectiveZone for the rest of the function
+  zone = effectiveZone;
   const distMi = EVENT_DISTANCES_MI[eventType];
   if (!distMi) return null;
   const totalSecs = parseGoalTimeSecs(goalTime);
@@ -121,6 +135,98 @@ const EFFORT_LABELS: Record<number, string> = {
   1: "Very Easy", 2: "Easy", 3: "Moderate", 4: "Moderate+", 5: "Hard",
   6: "Hard+", 7: "Very Hard", 8: "Extremely Hard", 9: "Near Max", 10: "Max",
 };
+
+// ─── Strength block types ──────────────────────────────────────────────────────
+
+interface StrengthExercise {
+  exercise: string;
+  sets: number;
+  reps: string;
+  load?: string;
+  tempo?: string;
+  rest?: string;
+  stationTarget?: string;
+  coachingCue?: string;
+}
+
+interface StrengthBlock {
+  blockLabel?: string;
+  exercises: StrengthExercise[];
+}
+
+interface StrengthSession {
+  sessionName?: string;
+  estimatedDuration?: string;
+  equipmentNeeded?: string[];
+  sessionCoachNote?: string;
+  warmup?: string;
+  blocks?: StrengthBlock[];
+  finisher?: string | null;
+  cooldown?: string;
+}
+
+function ExerciseRow({ ex }: { ex: StrengthExercise }) {
+  const [open, setOpen] = useState(false);
+  const hasDetails = !!(ex.load || ex.tempo || ex.rest || ex.stationTarget || ex.coachingCue);
+  return (
+    <div className="rounded-lg overflow-hidden" style={{ background: "rgba(168,85,247,0.07)", border: "1px solid rgba(168,85,247,0.2)" }}>
+      <button
+        type="button"
+        onClick={() => hasDetails && setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left"
+      >
+        <span className="text-sm font-semibold flex-1">{ex.exercise}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: "rgba(168,85,247,0.2)", color: "#A855F7" }}>
+            {ex.sets}×{ex.reps}
+          </span>
+          {hasDetails && (
+            <ChevronDown className="h-3 w-3 text-muted-foreground/40 transition-transform" style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }} />
+          )}
+        </div>
+      </button>
+      {open && (
+        <div className="px-3 pb-2.5 space-y-1 text-xs text-muted-foreground" style={{ borderTop: "1px solid rgba(168,85,247,0.12)" }}>
+          {ex.load && <p className="pt-2">{ex.load}</p>}
+          {(ex.tempo || ex.rest) && (
+            <div className="flex gap-2 pt-1">
+              {ex.tempo && <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded">{ex.tempo}</span>}
+              {ex.rest && <span className="bg-white/5 px-1.5 py-0.5 rounded">rest {ex.rest}</span>}
+            </div>
+          )}
+          {ex.stationTarget && <p className="font-semibold" style={{ color: "#00E87A" }}>→ {ex.stationTarget}</p>}
+          {ex.coachingCue && <p className="italic opacity-70">{ex.coachingCue}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StrengthView({ session }: { session: StrengthSession }) {
+  return (
+    <div className="space-y-3">
+      {session.sessionCoachNote && (
+        <p className="text-xs italic" style={{ color: "#FF5500" }}>{session.sessionCoachNote}</p>
+      )}
+      {(session.blocks ?? []).map((block, bi) => (
+        <div key={bi} className="space-y-1.5">
+          {block.blockLabel && (
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40">{block.blockLabel}</p>
+          )}
+          {(block.exercises ?? []).map((ex, ei) => (
+            <ExerciseRow key={ei} ex={ex} />
+          ))}
+        </div>
+      ))}
+      {session.finisher && (
+        <div className="rounded-lg px-3 py-2 text-xs" style={{ background: "rgba(255,85,0,0.06)", border: "1px solid rgba(255,85,0,0.2)" }}>
+          <p className="font-bold uppercase tracking-wider mb-1" style={{ color: "rgba(255,85,0,0.7)", fontSize: 9 }}>Finisher</p>
+          <p className="text-muted-foreground">{session.finisher}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function WorkoutDetailModal({
   workout,
@@ -154,7 +260,7 @@ export function WorkoutDetailModal({
     weekday: "long", month: "long", day: "numeric", timeZone: "UTC",
   });
 
-  const targetPace = getTargetPace(workout.goalTime, workout.eventType, workout.intensityZone);
+  const targetPace = getTargetPace(workout.goalTime, workout.eventType, workout.intensityZone, workout.type);
   const tip = WORKOUT_TIPS[workout.type];
 
   async function logWorkout(status: "COMPLETED" | "SKIPPED") {
@@ -290,11 +396,17 @@ export function WorkoutDetailModal({
           <div className="space-y-2">
             {!editing ? (
               <>
-                {workout.description && (
+                {/* Strength blocks take priority over plain description */}
+                {workout.strengthBlocks &&
+                typeof workout.strengthBlocks === "object" &&
+                Array.isArray((workout.strengthBlocks as StrengthSession).blocks) &&
+                ((workout.strengthBlocks as StrengthSession).blocks?.length ?? 0) > 0 ? (
+                  <StrengthView session={workout.strengthBlocks as StrengthSession} />
+                ) : workout.description ? (
                   <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
                     {workout.description}
                   </p>
-                )}
+                ) : null}
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     onClick={() => { setEditDesc(workout.description ?? ""); setEditing(true); }}

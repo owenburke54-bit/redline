@@ -4,6 +4,7 @@ import { daysUntil, formatDate, getMonday } from "@/lib/utils";
 
 import { WhoopSyncButton } from "@/components/whoop/WhoopSyncButton";
 import { WhoopRings } from "@/components/whoop/WhoopRings";
+import { WhoopTrendsWrapper } from "@/components/whoop/WhoopTrendsWrapper";
 import { GarminRings } from "@/components/garmin/GarminRings";
 import { GarminSyncButton } from "@/components/garmin/GarminSyncButton";
 import { TodayWorkouts } from "@/components/dashboard/TodayWorkouts";
@@ -168,32 +169,34 @@ export default async function DashboardPage() {
                 : "#FF2D2D"
               : "rgba(255,255,255,0.12)";
             return (
-              <div className="card-base overflow-hidden">
-                <div className="h-[3px]" style={{ backgroundColor: accentColor }} />
-                <div className="p-5">
-                  <WhoopRings
-                    recoveryScore={todayRecovery?.recoveryScore ?? null}
-                    strain={todayStrain}
-                    sleepScore={todayRecovery?.sleepScore ?? null}
-                    sleepDuration={todayRecovery?.sleepDuration ?? null}
-                    hrvRmssd={todayRecovery?.hrvRmssd ?? null}
-                    restingHr={todayRecovery?.restingHr ?? null}
-                    impactText={
-                      todayRecovery
-                        ? trainingImpact(todayRecovery.recoveryScore, todayWorkoutTitle, recentHighStrain)
-                        : "Recovery data posts each morning after sleep. Sync or check back tomorrow."
-                    }
-                    staleLabel={(() => {
-                      if (!todayRecovery) return null;
-                      const daysAgo = Math.floor((Date.now() - todayRecovery.date.getTime()) / 86400000);
-                      return daysAgo > 1
-                        ? `From ${todayRecovery.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} — tap Sync to refresh`
-                        : null;
-                    })()}
-                    recentActivities={recentActivities}
-                  />
+              <WhoopTrendsWrapper>
+                <div className="card-base overflow-hidden">
+                  <div className="h-[3px]" style={{ backgroundColor: accentColor }} />
+                  <div className="p-5">
+                    <WhoopRings
+                      recoveryScore={todayRecovery?.recoveryScore ?? null}
+                      strain={todayStrain}
+                      sleepScore={todayRecovery?.sleepScore ?? null}
+                      sleepDuration={todayRecovery?.sleepDuration ?? null}
+                      hrvRmssd={todayRecovery?.hrvRmssd ?? null}
+                      restingHr={todayRecovery?.restingHr ?? null}
+                      impactText={
+                        todayRecovery
+                          ? trainingImpact(todayRecovery.recoveryScore, todayWorkoutTitle, recentHighStrain)
+                          : "Recovery data posts each morning after sleep. Sync or check back tomorrow."
+                      }
+                      staleLabel={(() => {
+                        if (!todayRecovery) return null;
+                        const daysAgo = Math.floor((Date.now() - todayRecovery.date.getTime()) / 86400000);
+                        return daysAgo > 1
+                          ? `From ${todayRecovery.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} — tap Sync to refresh`
+                          : null;
+                      })()}
+                      recentActivities={recentActivities}
+                    />
+                  </div>
                 </div>
-              </div>
+              </WhoopTrendsWrapper>
             );
           })()}
         </section>

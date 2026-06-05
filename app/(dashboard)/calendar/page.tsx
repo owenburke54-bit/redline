@@ -45,6 +45,7 @@ export default async function CalendarPage() {
     eventName: w.plan.event.name,
     goalTime: w.plan.event.goalTime,
     planId: w.planId,
+    strengthBlocks: w.strengthBlocks ?? null,
   }));
 
   return (

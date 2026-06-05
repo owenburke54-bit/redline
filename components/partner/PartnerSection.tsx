@@ -67,11 +67,11 @@ function InviteSheet({ onInvited }: { onInvited: () => void }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-semibold transition-all"
-        style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.1)" }}
+        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all"
+        style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
       >
-        <Users className="h-3.5 w-3.5" />
-        Invite training partner
+        <Users className="h-3.5 w-3.5 shrink-0" />
+        Invite partner
       </button>
 
       {open && (

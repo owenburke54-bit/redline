@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { FloatingCoachButton } from "@/components/coach/FloatingCoachButton";
 import { MobilePreview } from "@/components/dev/MobilePreview";
+import { MobileHeader } from "@/components/layout/MobileHeader";
 
 export default async function DashboardLayout({
   children,
@@ -23,7 +24,8 @@ export default async function DashboardLayout({
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar userName={session.user?.name} />
-      <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-8 md:pb-8 lg:p-10 animate-page-in">{children}</main>
+      <MobileHeader />
+      <main className="flex-1 overflow-y-auto p-4 pt-16 pb-24 md:pt-8 md:p-8 md:pb-8 lg:p-10 animate-page-in">{children}</main>
       <FloatingCoachButton />
       <MobilePreview />
     </div>

@@ -36,48 +36,49 @@ export function ReadinessWidget({
 
   return (
     <div
-      className="rounded-xl p-5"
+      className="rounded-xl p-4"
       style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}
     >
-      {/* Header row: score + predicted time */}
-      <div className="flex items-start justify-between gap-4 mb-5">
-        <div>
-          <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground/40 uppercase mb-2">
+      {/* Top row: score + predicted side by side */}
+      <div className="flex items-start gap-3 mb-4">
+        {/* Score */}
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground/40 uppercase mb-1">
             Race Readiness
           </p>
-          <div className="flex items-baseline gap-2.5">
+          <div className="flex items-baseline gap-2">
             <span
-              className="text-[3.25rem] font-black leading-none tabular-nums"
+              className="text-[2.5rem] font-black leading-none tabular-nums"
               style={{ color: readiness.color }}
             >
               {readiness.score}
             </span>
-            <span className="text-[14px] font-bold leading-none" style={{ color: readiness.color }}>
+            <span className="text-[13px] font-bold leading-none" style={{ color: readiness.color }}>
               {readiness.label}
             </span>
           </div>
         </div>
 
         {predicted && (
-          <div className="text-right shrink-0">
-            <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground/40 uppercase mb-2">
-              Predicted Finish
+          <div className="text-right">
+            <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground/40 uppercase mb-1">
+              Predicted
             </p>
             <p
-              className="text-[2rem] font-black leading-none tabular-nums"
+              className="text-[1.6rem] font-black leading-none tabular-nums"
               style={{ color: accentColor }}
             >
               {predicted.formatted}
             </p>
-            <p className="text-[9px] text-muted-foreground/30 mt-1 uppercase tracking-wider">
-              {predicted.confidence} confidence · {predicted.basis}
+            <p className="text-[9px] text-muted-foreground/30 mt-0.5 leading-tight">
+              {predicted.confidence} conf · {predicted.basis}
             </p>
           </div>
         )}
       </div>
 
       {/* Breakdown bars */}
-      <div className="space-y-2.5 mb-4">
+      <div className="space-y-2 mb-3">
         <MiniBar label="Sessions" value={readiness.breakdown.sessions} color={barColor(readiness.breakdown.sessions)} />
         <MiniBar label="Volume" value={readiness.breakdown.volume} color={barColor(readiness.breakdown.volume)} />
         <MiniBar label="Consistency" value={readiness.breakdown.consistency} color={barColor(readiness.breakdown.consistency)} />

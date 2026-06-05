@@ -75,7 +75,9 @@ export function WeeklyBriefCard() {
           <div className="h-4 rounded bg-muted/40 animate-pulse w-3/5" />
         </div>
       ) : (
-        <p className="text-[13px] text-foreground/80 leading-relaxed">{content}</p>
+        <p className="text-[13px] text-foreground/80 leading-relaxed">
+          {content && content.length > 220 ? content.slice(0, 220).trimEnd() + "…" : content}
+        </p>
       )}
     </div>
   );
