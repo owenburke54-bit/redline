@@ -32,6 +32,7 @@ export type WeekRowData = {
   isPast: boolean;
   keySession: WorkoutRowData | null;
   accentColor: string;
+  weekReadinessPct?: number;
 };
 
 const WORKOUT_STYLE: Record<string, { bg: string; border: string; text: string; short: string }> = {
@@ -215,9 +216,9 @@ export function WeekRow({
     if (w.dayOfWeek >= 0 && w.dayOfWeek <= 6) slots[w.dayOfWeek] = w;
   }
 
-  const completionPct = week.nonRestCount > 0
-    ? Math.round((week.completedCount / week.nonRestCount) * 100)
-    : null;
+  const displayPct = week.weekReadinessPct ?? (
+    week.nonRestCount > 0 ? Math.round((week.completedCount / week.nonRestCount) * 100) : null
+  );
 
   const keyStyle = week.keySession ? (WORKOUT_STYLE[week.keySession.type] ?? WORKOUT_STYLE.REST) : null;
 
@@ -323,10 +324,10 @@ export function WeekRow({
                 style={{ background: `${week.accentColor}20`, color: week.accentColor }}>
                 NOW
               </span>
-            ) : week.isPast && completionPct !== null ? (
+            ) : week.isPast && displayPct !== null ? (
               <span className="text-[10px] font-bold tabular-nums"
-                style={{ color: completionPct >= 80 ? "#00E87A" : completionPct >= 50 ? "#FFB800" : "#FF2D2D" }}>
-                {completionPct}%
+                style={{ color: displayPct >= 80 ? "#00E87A" : displayPct >= 50 ? "#FFB800" : "#FF2D2D" }}>
+                {displayPct}%
               </span>
             ) : null}
           </div>

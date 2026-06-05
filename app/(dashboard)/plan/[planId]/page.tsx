@@ -8,6 +8,9 @@ import { ResolveConflictsButton } from "@/components/plan/ResolveConflictsButton
 import { PlanStatusToggle } from "@/components/plan/PlanStatusToggle";
 import { RestoreTemplateButton } from "@/components/plan/RestoreTemplateButton";
 import { PlanArcBar } from "@/components/plan/PlanArcBar";
+import { ReadinessWidget } from "@/components/plan/ReadinessWidget";
+import { computePlanReadiness, computeWeekReadiness, predictFinishTime } from "@/lib/plans/readiness";
+import { computeTrainingZones } from "@/lib/strava/zones";
 import { Trophy, Target, CalendarDays } from "lucide-react";
 import { daysUntil } from "@/lib/utils";
 import Link from "next/link";
@@ -27,13 +30,32 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
   const userId = session!.user!.id as string;
   const { planId } = await params;
 
-  const plan = await db.trainingPlan.findUnique({
-    where: { id: planId },
-    include: {
-      event: true,
-      workouts: { orderBy: { scheduledDate: "asc" } },
-    },
-  });
+  const [plan, stravaRuns, whoopRunning, whoopRecovery7d] = await Promise.all([
+    db.trainingPlan.findUnique({
+      where: { id: planId },
+      include: {
+        event: true,
+        workouts: { orderBy: { scheduledDate: "asc" } },
+      },
+    }),
+    db.stravaActivity.findMany({
+      where: { userId, type: { in: ["Run", "VirtualRun", "TrailRun"] } },
+      select: { distance: true, movingTime: true, averageSpeed: true, averageHeartrate: true, maxHeartrate: true, startDate: true },
+      orderBy: { startDate: "desc" },
+      take: 100,
+    }),
+    db.whoopActivity.findMany({
+      where: { userId, sportName: "Running" },
+      select: { startDate: true, avgHeartRate: true, maxHeartRate: true },
+      orderBy: { startDate: "desc" },
+      take: 100,
+    }),
+    db.whoopRecovery.findMany({
+      where: { userId, date: { gte: new Date(Date.now() - 14 * 86400000) } },
+      select: { recoveryScore: true },
+      orderBy: { date: "desc" },
+    }),
+  ]);
 
   if (!plan || plan.userId !== userId) notFound();
 
@@ -115,6 +137,7 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
       isPast,
       keySession,
       accentColor,
+      weekReadinessPct: (isCurrent || isPast) ? (computeWeekReadiness(workouts) ?? undefined) : undefined,
     };
   });
 
@@ -130,6 +153,22 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
   const completionPct = totalNonRest > 0 ? Math.round((totalCompleted / totalNonRest) * 100) : 0;
   const currentWeekIndex = weeks.findIndex(w => w.isCurrentWeek);
   const currentPhase = currentWeekIndex >= 0 ? weeks[currentWeekIndex].phase : weeks[0]?.phase ?? "Base";
+
+  // Readiness + predicted finish time
+  const whoopAvgRecovery = whoopRecovery7d.length > 0
+    ? whoopRecovery7d.reduce((s, r) => s + r.recoveryScore, 0) / whoopRecovery7d.length
+    : null;
+
+  const readiness = computePlanReadiness({ weeks, whoopAvgRecovery });
+
+  const zones = computeTrainingZones(stravaRuns, whoopRunning);
+  const predicted = predictFinishTime({
+    eventType: plan.event.type,
+    thresholdSecsPerMile: zones.thresholdSecsPerMile,
+    avgWeeklyMiles: zones.avgWeeklyMiles,
+    runCount: zones.runCount,
+    compliancePct: completionPct,
+  });
 
   // Phase timeline: group consecutive same-phase weeks
   const phaseSegments: { phase: string; count: number; startsAtCurrentWeek: boolean; isPastPhase: boolean; isFuturePhase: boolean }[] = [];
@@ -238,6 +277,9 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
           </div>
         ))}
       </div>
+
+      {/* Readiness score + predicted time */}
+      <ReadinessWidget readiness={readiness} predicted={predicted} accentColor={accentColor} />
 
       {/* Phase timeline strip */}
       <PlanArcBar
