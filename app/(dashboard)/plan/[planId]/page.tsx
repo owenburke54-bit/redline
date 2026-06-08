@@ -101,6 +101,8 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
       warmup: w.warmup ?? null,
       cooldown: w.cooldown ?? null,
       coachingCues: w.coachingCues ?? null,
+      goalTime: plan.event.goalTime ?? null,
+      eventType: plan.event.type,
     };
     weekMap.get(weekNum)!.push(workoutRow as WorkoutRowData);
   }

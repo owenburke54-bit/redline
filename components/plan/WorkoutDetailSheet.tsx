@@ -47,6 +47,8 @@ export interface WorkoutDetailData extends WorkoutRowData {
   coachingCues?: string | null;
   scheduledDate?: string | null;
   intensityZone?: number | null;
+  goalTime?: string | null;
+  eventType?: string | null;
 }
 
 // ─── Style maps (mirrored from WeekRow) ───────────────────────────────────────
@@ -69,6 +71,61 @@ const TYPE_LABELS: Record<string, string> = {
   INTERVALS: "Intervals", HYROX_STATION_WORK: "Station Work", HYROX_SIM: "HYROX Sim",
   STRENGTH: "Strength", CROSS_TRAIN: "Cross-Train", REST: "Rest", RACE: "Race",
 };
+
+// ─── Pace target calculation (mirrors WorkoutDetailModal logic) ───────────────
+
+const HYROX_RUN_MI = 4.971;
+const EVENT_DISTANCES_MI: Record<string, number> = {
+  MARATHON: 26.2, HALF_MARATHON: 13.1, FIVE_K: 3.107, TEN_K: 6.214,
+  HYROX: HYROX_RUN_MI, HYROX_WOMENS: HYROX_RUN_MI,
+  HYROX_DOUBLES: HYROX_RUN_MI, HYROX_DOUBLES_MIXED: HYROX_RUN_MI,
+  HYROX_DOUBLES_MENS: HYROX_RUN_MI, HYROX_DOUBLES_WOMENS: HYROX_RUN_MI,
+};
+const EVENT_RUN_FRACTION: Partial<Record<string, number>> = {
+  HYROX: 0.5, HYROX_WOMENS: 0.5,
+  HYROX_DOUBLES: 0.55, HYROX_DOUBLES_MIXED: 0.55,
+  HYROX_DOUBLES_MENS: 0.55, HYROX_DOUBLES_WOMENS: 0.55,
+};
+const ZONE_PACE_OFFSETS: Record<number, number> = { 1: 150, 2: 90, 3: 20, 4: -15, 5: -60 };
+const DEFAULT_ZONE: Partial<Record<string, number>> = {
+  EASY_RUN: 2, LONG_RUN: 2, TEMPO: 3, INTERVALS: 5,
+};
+
+function parseGoalTimeSecs(s: string): number | null {
+  const cleaned = s.toLowerCase().replace(/^sub-?\s*/, "").trim();
+  const parts = cleaned.split(":").map(Number);
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 3600 + parts[1] * 60;
+  return null;
+}
+
+function secsToMmss(secs: number): string {
+  const m = Math.floor(secs / 60);
+  const s = Math.round(secs % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function getTargetPace(
+  goalTime: string | null | undefined,
+  eventType: string | null | undefined,
+  zone: number | null | undefined,
+  workoutType: string
+): string | null {
+  const effectiveZone = zone ?? DEFAULT_ZONE[workoutType];
+  if (!goalTime || !effectiveZone || !eventType) return null;
+  const distMi = EVENT_DISTANCES_MI[eventType];
+  if (!distMi) return null;
+  const totalSecs = parseGoalTimeSecs(goalTime);
+  if (!totalSecs) return null;
+  const runFraction = EVENT_RUN_FRACTION[eventType] ?? 1;
+  const goalPacePerMile = (totalSecs * runFraction) / distMi;
+  const offset = ZONE_PACE_OFFSETS[effectiveZone];
+  if (offset === undefined) return null;
+  const zonePace = goalPacePerMile + offset;
+  if (zonePace <= 60 || zonePace > 1800) return null;
+  return `${secsToMmss(zonePace)}/mi`;
+}
 
 const STATUS_OPTIONS = [
   { value: "COMPLETED", label: "Completed", color: "#00E87A" },
@@ -356,7 +413,9 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
   if (!workout) return null;
 
   const s = WORKOUT_STYLE[workout.type] ?? WORKOUT_STYLE.REST;
-  const rawStrength = (workout as WorkoutDetailData).strengthBlocks as StrengthSession | null | undefined;
+  const wd = workout as WorkoutDetailData;
+  const targetPaceFromGoal = getTargetPace(wd.goalTime, wd.eventType, wd.intensityZone, workout.type);
+  const rawStrength = wd.strengthBlocks as StrengthSession | null | undefined;
   const hasStrengthBlocks =
     rawStrength != null &&
     typeof rawStrength === "object" &&
@@ -488,6 +547,26 @@ export function WorkoutDetailSheet({ workout, onClose, onWorkoutUpdated }: Worko
                     </p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Target pace box — computed from goal time + zone */}
+            {targetPaceFromGoal && (
+              <div
+                className="rounded-lg px-3 py-2.5 flex items-center justify-between"
+                style={{ background: `${s.bg}`, border: `1px solid ${s.border}` }}
+              >
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-wider mb-0.5" style={{ color: s.text, opacity: 0.7 }}>
+                    Target pace for this zone
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/40">
+                    Goal: {wd.goalTime}
+                  </p>
+                </div>
+                <p className="text-[1.5rem] font-black tabular-nums leading-none" style={{ color: s.text }}>
+                  {targetPaceFromGoal}
+                </p>
               </div>
             )}
 
