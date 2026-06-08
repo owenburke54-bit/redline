@@ -45,6 +45,7 @@ model User {
   weeklyBriefs          WeeklyBrief[]
   partnershipsSent      Partnership[]   @relation("PartnerSent")
   partnershipsReceived  Partnership[]   @relation("PartnerReceived")
+  planAdaptations       PlanAdaptation[]
 }
 
 model Account {
@@ -155,7 +156,8 @@ model TrainingPlan {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  workouts Workout[]
+  workouts    Workout[]
+  adaptations PlanAdaptation[]
 }
 
 enum PlanTemplate {
@@ -414,4 +416,39 @@ model WeeklyBrief {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, weekStart])
+}
+
+model PlanAdaptation {
+  id     String       @id @default(cuid())
+  userId String
+  user   User         @relation(fields: [userId], references: [id])
+  planId String
+  plan   TrainingPlan @relation(fields: [planId], references: [id])
+
+  adaptationType   AdaptationType
+  severity         AdaptationSeverity
+  triggerSignals   String[]
+  weekRange        Json               // { from: number, to: number }
+  workoutsModified Int                @default(0)
+  coachSummary     String
+  coachMessage     String
+
+  appliedAt   DateTime  @default(now())
+  dismissedAt DateTime?
+
+  createdAt DateTime @default(now())
+}
+
+enum AdaptationType {
+  LOAD_REDUCTION
+  RECOVERY_WEEK
+  RAMP_CORRECTION
+  INTENSITY_SHIFT
+  LOAD_INCREASE
+}
+
+enum AdaptationSeverity {
+  LOW
+  MEDIUM
+  HIGH
 }

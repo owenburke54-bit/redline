@@ -18,7 +18,7 @@
     },
     {
       "path": "/api/plans/review",
-      "schedule": "0 7 * * 1"
+      "schedule": "30 6 * * 1"
     },
     {
       "path": "/api/conflicts/scan",
@@ -26,7 +26,7 @@
     },
     {
       "path": "/api/brief/generate",
-      "schedule": "0 6 * * 1"
+      "schedule": "0 7 * * 1"
     },
     {
       "path": "/api/athlete-model/compute",

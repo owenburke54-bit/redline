@@ -14,6 +14,7 @@ import { WeeklyBriefCard } from "@/components/dashboard/WeeklyBriefCard";
 import { DedicationScoreButton } from "@/components/dashboard/DedicationScoreButton";
 import { PartnerSection } from "@/components/partner/PartnerSection";
 import { RpeNudgeCard } from "@/components/dashboard/RpeNudgeCard";
+import { PlanAdaptationCard } from "@/components/dashboard/PlanAdaptationCard";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -79,7 +80,7 @@ export default async function DashboardPage() {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 7);
 
-  const [user, events, todayWorkouts, todayRecovery, recentActivities, todayCycle, todayGarmin, lastCheckin, weekWorkouts, athleteModel, pendingRpeWorkouts] = await Promise.all([
+  const [user, events, todayWorkouts, todayRecovery, recentActivities, todayCycle, todayGarmin, lastCheckin, weekWorkouts, athleteModel, pendingRpeWorkouts, latestAdaptation] = await Promise.all([
     db.user.findUnique({ where: { id: userId }, select: { id: true, name: true, dedicationScore: true, whoopAccessToken: true, whoopId: true, garminAccessToken: true, garminUserId: true } }),
     db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" }, include: { plan: { select: { id: true } } } }),
     db.workout.findMany({
@@ -132,6 +133,22 @@ export default async function DashboardPage() {
       select: { id: true, title: true, type: true },
       orderBy: { completedAt: "desc" },
       take: 3,
+    }),
+    db.planAdaptation.findFirst({
+      where: { userId, dismissedAt: null },
+      orderBy: { appliedAt: "desc" },
+      select: {
+        id: true,
+        adaptationType: true,
+        severity: true,
+        triggerSignals: true,
+        weekRange: true,
+        workoutsModified: true,
+        coachMessage: true,
+        coachSummary: true,
+        appliedAt: true,
+        planId: true,
+      },
     }),
   ]);
 
@@ -340,6 +357,20 @@ export default async function DashboardPage() {
               </p>
             </div>
           </div>
+        </section>
+      )}
+
+      {/* Plan adaptation card — shown when auto-adaptation has been applied this week */}
+      {latestAdaptation && (
+        <section>
+          <PlanAdaptationCard
+            adaptation={{
+              ...latestAdaptation,
+              weekRange: latestAdaptation.weekRange as { from: number; to: number },
+              appliedAt: latestAdaptation.appliedAt.toISOString(),
+            }}
+            planId={latestAdaptation.planId}
+          />
         </section>
       )}
 

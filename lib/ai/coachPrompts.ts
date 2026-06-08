@@ -143,6 +143,16 @@ function buildAthleteModelSection(model: AthleteModelSnapshot | null): string {
   return lines.join("\n");
 }
 
+interface AdaptationContext {
+  adaptationType: string;
+  severity: string;
+  triggerSignals: string[];
+  weekRange: { from: number; to: number };
+  workoutsModified: number;
+  coachSummary: string;
+  appliedAt: string;
+}
+
 export function buildCoachSystemPrompt(params: {
   athleteName: string;
   dedicationScore: number;
@@ -156,6 +166,7 @@ export function buildCoachSystemPrompt(params: {
   classSchedule?: { studios: { id: string; name: string; days: number[] }[] } | null;
   currentDate?: string;
   athleteModel?: AthleteModelSnapshot | null;
+  recentAdaptation?: AdaptationContext | null;
   recentTraining?: {
     completedWorkouts: Array<{
       date: string;
@@ -173,7 +184,7 @@ export function buildCoachSystemPrompt(params: {
     whoopTrend: Array<{ date: string; score: number; hrv: number | null }>;
   };
 }): string {
-  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, stravaZoneContext, activeConflicts, classSchedule, currentDate, athleteModel, recentTraining } = params;
+  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, stravaZoneContext, activeConflicts, classSchedule, currentDate, athleteModel, recentAdaptation, recentTraining } = params;
 
   const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const classScheduleNote = classSchedule?.studios && classSchedule.studios.length > 0
@@ -270,6 +281,26 @@ ${whoopLines}`;
 
   const athleteModelSection = buildAthleteModelSection(athleteModel ?? null);
 
+  const adaptationSection = recentAdaptation ? (() => {
+    const daysAgo = Math.floor((Date.now() - new Date(recentAdaptation.appliedAt).getTime()) / 86400000);
+    const when = daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`;
+    const SIGNAL_LABELS: Record<string, string> = {
+      low_compliance: "low compliance",
+      low_recovery: "low recovery scores",
+      high_fatigue: "accumulated fatigue (TSB)",
+      ramp_too_fast: "load increasing too fast",
+      rpe_too_hard: "RPE trending high",
+      rpe_too_easy: "RPE consistently low",
+    };
+    const signals = recentAdaptation.triggerSignals.map(s => SIGNAL_LABELS[s] ?? s).join(", ");
+    return `RECENT PLAN ADAPTATION (${when}):
+Type: ${recentAdaptation.adaptationType.replace(/_/g, " ").toLowerCase()} (${recentAdaptation.severity.toLowerCase()} severity)
+Triggered by: ${signals || "automated thresholds"}
+Weeks ${recentAdaptation.weekRange.from}–${recentAdaptation.weekRange.to} affected — ${recentAdaptation.workoutsModified} workouts modified
+Summary: ${recentAdaptation.coachSummary}
+If the athlete asks about changes to their plan, this is the context. Be specific about what changed and why.`;
+  })() : "";
+
   return `You are a direct, experienced endurance and functional fitness coach working with ${athleteName}.
 ${currentDate ? `Today is ${currentDate}.` : ""}
 
@@ -279,7 +310,7 @@ Dedication score: ${dedicationScore}/10${dedicationScore >= 8 ? " — they expec
 
 ACTIVE EVENTS:
 ${activeEvents.map(e => `- ${e.name} (${e.type}): ${e.weeksOut} weeks away${e.goalTime ? ` | Goal: ${e.goalTime}` : ""}`).join("\n")}
-${athleteModelSection ? `\n${athleteModelSection}\n` : ""}${recentTrainingSection}
+${athleteModelSection ? `\n${athleteModelSection}\n` : ""}${adaptationSection ? `\n${adaptationSection}\n` : ""}${recentTrainingSection}
 THIS WEEK'S WORKOUTS:
 ${currentWeekWorkouts}
 

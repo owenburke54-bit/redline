@@ -58,8 +58,9 @@ export async function POST(req: NextRequest) {
   const weekEnd = new Date(weekStart.getTime() + 7 * 86400000);
   const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000);
   const threeDaysAgo = new Date(Date.now() - 3 * 86400000);
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
 
-  const [user, thisWeekWorkouts, recentWhoop, last14Workouts, events] = await Promise.all([
+  const [user, thisWeekWorkouts, recentWhoop, last14Workouts, events, recentAdaptation] = await Promise.all([
     db.user.findUnique({ where: { id: targetUserId }, select: { name: true } }),
     db.workout.findMany({
       where: { userId: targetUserId, scheduledDate: { gte: weekStart, lt: weekEnd }, type: { not: "REST" } },
@@ -80,6 +81,11 @@ export async function POST(req: NextRequest) {
       where: { userId: targetUserId, isActive: true },
       orderBy: { date: "asc" },
       take: 1,
+    }),
+    db.planAdaptation.findFirst({
+      where: { userId: targetUserId, appliedAt: { gte: sevenDaysAgo } },
+      orderBy: { appliedAt: "desc" },
+      select: { adaptationType: true, coachSummary: true, appliedAt: true },
     }),
   ]);
 
@@ -109,15 +115,27 @@ export async function POST(req: NextRequest) {
     ? `${nextEvent.name}, ${daysOut} days out`
     : "No upcoming events";
 
+  const TYPE_LABELS: Record<string, string> = {
+    LOAD_REDUCTION: "load reduction",
+    RECOVERY_WEEK: "recovery week",
+    RAMP_CORRECTION: "ramp correction",
+    INTENSITY_SHIFT: "intensity shift",
+    LOAD_INCREASE: "load increase",
+  };
+  const adaptationLine = recentAdaptation
+    ? `RECENT PLAN ADAPTATION: ${TYPE_LABELS[recentAdaptation.adaptationType] ?? recentAdaptation.adaptationType.toLowerCase()} applied this week — ${recentAdaptation.coachSummary}`
+    : "";
+
   const prompt = `You are a direct coach. Write 2-3 sentences summarizing this athlete's week ahead.
 No bullet points, no markdown, no headers. Speak directly to the athlete.
 Tone: confident, specific, brief. Example: "Big week ahead — tempo Tuesday, long run Saturday, and station work Wednesday. Your recovery has been solid so don't hold back on the tempo effort. 129 days to HYROX Boston."
+${adaptationLine ? `If a plan adaptation occurred, briefly acknowledge it in one of your sentences without belaboring it.` : ""}
 
 ATHLETE: ${athleteName}
 THIS WEEK: ${workoutList}
 RECENT RECOVERY: ${recoveryList}
 COMPLIANCE LAST 2 WEEKS: ${compliancePct}%
-NEXT EVENT: ${eventLine}`;
+NEXT EVENT: ${eventLine}${adaptationLine ? `\n${adaptationLine}` : ""}`;
 
   const message = await anthropic.messages.create({
     model: CLAUDE_MODEL,

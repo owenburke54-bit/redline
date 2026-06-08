@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [user, profile, events, weekWorkouts, whoopActivities, todayRecovery, stravaRuns, whoopRunning, todayGarmin, recentWorkouts7, whoopTrend7, last14Workouts, athleteModel] = await Promise.all([
+  const [user, profile, events, weekWorkouts, whoopActivities, todayRecovery, stravaRuns, whoopRunning, todayGarmin, recentWorkouts7, whoopTrend7, last14Workouts, athleteModel, recentAdaptation] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.athleteProfile.findUnique({ where: { userId } }),
     db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" } }),
@@ -127,6 +127,18 @@ export async function POST(req: NextRequest) {
         avgWeeklyMiles: true, avgRecovery7d: true,
         weaknesses: true, injuryRiskFlag: true, injuryRiskNote: true,
         dataConfidence: true, lastComputedAt: true,
+      },
+    }),
+    // Most recent plan adaptation from the last 30 days
+    db.planAdaptation.findFirst({
+      where: {
+        userId,
+        appliedAt: { gte: new Date(Date.now() - 30 * 86400000) },
+      },
+      orderBy: { appliedAt: "desc" },
+      select: {
+        adaptationType: true, severity: true, triggerSignals: true,
+        weekRange: true, workoutsModified: true, coachSummary: true, appliedAt: true,
       },
     }),
   ]);
@@ -250,6 +262,11 @@ export async function POST(req: NextRequest) {
     whoopContext: wearableContext,
     stravaZoneContext,
     athleteModel: athleteModel ?? null,
+    recentAdaptation: recentAdaptation ? {
+      ...recentAdaptation,
+      weekRange: recentAdaptation.weekRange as { from: number; to: number },
+      appliedAt: recentAdaptation.appliedAt.toISOString(),
+    } : null,
     activeConflicts: [],
     classSchedule: (() => {
       const r = classScheduleSchema.safeParse(profile?.classSchedule);

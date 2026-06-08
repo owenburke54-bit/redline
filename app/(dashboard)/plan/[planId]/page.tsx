@@ -11,7 +11,7 @@ import { PlanArcBar } from "@/components/plan/PlanArcBar";
 import { ReadinessWidget } from "@/components/plan/ReadinessWidget";
 import { computePlanReadiness, computeWeekReadiness, predictFinishTime } from "@/lib/plans/readiness";
 import { computeTrainingZones } from "@/lib/strava/zones";
-import { Trophy, Target, CalendarDays } from "lucide-react";
+import { Trophy, Target, CalendarDays, History, TrendingDown, TrendingUp, RefreshCw, Zap, Shield } from "lucide-react";
 import { daysUntil } from "@/lib/utils";
 import Link from "next/link";
 
@@ -30,7 +30,7 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
   const userId = session!.user!.id as string;
   const { planId } = await params;
 
-  const [plan, stravaRuns, whoopRunning, whoopRecovery7d, athleteModel] = await Promise.all([
+  const [plan, stravaRuns, whoopRunning, whoopRecovery7d, athleteModel, recentAdaptations] = await Promise.all([
     db.trainingPlan.findUnique({
       where: { id: planId },
       include: {
@@ -58,6 +58,22 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
     db.athleteModel.findUnique({
       where: { userId },
       select: { ctl: true, atl: true, tsb: true },
+    }),
+    db.planAdaptation.findMany({
+      where: { planId },
+      orderBy: { appliedAt: "desc" },
+      take: 3,
+      select: {
+        id: true,
+        adaptationType: true,
+        severity: true,
+        triggerSignals: true,
+        weekRange: true,
+        workoutsModified: true,
+        coachMessage: true,
+        appliedAt: true,
+        dismissedAt: true,
+      },
     }),
   ]);
 
@@ -352,6 +368,54 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
           </div>
         ))}
       </div>
+
+      {/* Adaptation history */}
+      {recentAdaptations.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <History className="h-3.5 w-3.5" style={{ color: "rgba(255,255,255,0.25)" }} />
+            <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground/40 uppercase">
+              Plan Adaptations
+            </p>
+          </div>
+          <div className="space-y-2">
+            {recentAdaptations.map(a => {
+              const TYPE_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+                LOAD_REDUCTION: { label: "Load Reduction", color: "#FFB800", icon: <TrendingDown className="h-3 w-3" /> },
+                RECOVERY_WEEK: { label: "Recovery Week", color: "#4A9EFF", icon: <Shield className="h-3 w-3" /> },
+                RAMP_CORRECTION: { label: "Ramp Correction", color: "#FF8C00", icon: <RefreshCw className="h-3 w-3" /> },
+                INTENSITY_SHIFT: { label: "Intensity Shift", color: "#A78BFA", icon: <Zap className="h-3 w-3" /> },
+                LOAD_INCREASE: { label: "Load Increase", color: "#00E87A", icon: <TrendingUp className="h-3 w-3" /> },
+              };
+              const cfg = TYPE_CONFIG[a.adaptationType] ?? { label: a.adaptationType, color: "rgba(255,255,255,0.4)", icon: null };
+              const daysAgo = Math.floor((Date.now() - a.appliedAt.getTime()) / 86400000);
+              const when = daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo}d ago`;
+              const range = a.weekRange as { from: number; to: number };
+
+              return (
+                <div
+                  key={a.id}
+                  className="rounded-lg px-4 py-3 flex items-start gap-3"
+                  style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", opacity: a.dismissedAt ? 0.5 : 1 }}
+                >
+                  <span style={{ color: cfg.color }} className="mt-0.5 shrink-0">{cfg.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-[11px] font-bold" style={{ color: cfg.color }}>{cfg.label}</span>
+                      <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+                        weeks {range.from}–{range.to} · {a.workoutsModified} sessions · {when}
+                      </span>
+                    </div>
+                    <p className="text-[11px] mt-0.5 leading-snug" style={{ color: "rgba(255,255,255,0.5)" }}>
+                      {a.coachMessage}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Race week callout */}
       {daysOut <= 14 && (
