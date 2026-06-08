@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [user, profile, events, weekWorkouts, whoopActivities, todayRecovery, stravaRuns, whoopRunning, todayGarmin, recentWorkouts7, whoopTrend7, last14Workouts] = await Promise.all([
+  const [user, profile, events, weekWorkouts, whoopActivities, todayRecovery, stravaRuns, whoopRunning, todayGarmin, recentWorkouts7, whoopTrend7, last14Workouts, athleteModel] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.athleteProfile.findUnique({ where: { userId } }),
     db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" } }),
@@ -117,6 +117,17 @@ export async function POST(req: NextRequest) {
         type: { not: "REST" },
       },
       select: { status: true },
+    }),
+    // Persisted athlete fitness model (may be null for new users)
+    db.athleteModel.findUnique({
+      where: { userId },
+      select: {
+        ctl: true, atl: true, tsb: true,
+        rpeAvg7d: true, rpeAvg28d: true, complianceRate28d: true,
+        avgWeeklyMiles: true, avgRecovery7d: true,
+        weaknesses: true, injuryRiskFlag: true, injuryRiskNote: true,
+        dataConfidence: true, lastComputedAt: true,
+      },
     }),
   ]);
 
@@ -238,6 +249,7 @@ export async function POST(req: NextRequest) {
       : "Strava not connected.",
     whoopContext: wearableContext,
     stravaZoneContext,
+    athleteModel: athleteModel ?? null,
     activeConflicts: [],
     classSchedule: (() => {
       const r = classScheduleSchema.safeParse(profile?.classSchedule);

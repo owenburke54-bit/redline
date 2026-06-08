@@ -30,7 +30,7 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
   const userId = session!.user!.id as string;
   const { planId } = await params;
 
-  const [plan, stravaRuns, whoopRunning, whoopRecovery7d] = await Promise.all([
+  const [plan, stravaRuns, whoopRunning, whoopRecovery7d, athleteModel] = await Promise.all([
     db.trainingPlan.findUnique({
       where: { id: planId },
       include: {
@@ -54,6 +54,10 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
       where: { userId, date: { gte: new Date(Date.now() - 14 * 86400000) } },
       select: { recoveryScore: true },
       orderBy: { date: "desc" },
+    }),
+    db.athleteModel.findUnique({
+      where: { userId },
+      select: { ctl: true, atl: true, tsb: true },
     }),
   ]);
 
@@ -281,7 +285,14 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
       </div>
 
       {/* Readiness score + predicted time */}
-      <ReadinessWidget readiness={readiness} predicted={predicted} accentColor={accentColor} />
+      <ReadinessWidget
+        readiness={readiness}
+        predicted={predicted}
+        accentColor={accentColor}
+        ctl={athleteModel?.ctl}
+        atl={athleteModel?.atl}
+        tsb={athleteModel?.tsb}
+      />
 
       {/* Phase timeline strip */}
       <PlanArcBar

@@ -27,6 +27,10 @@
     {
       "path": "/api/brief/generate",
       "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/athlete-model/compute",
+      "schedule": "0 23 * * 0"
     }
   ]
 }

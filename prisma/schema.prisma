@@ -41,6 +41,7 @@ model User {
   garminDailySummaries  GarminDailySummary[]
   checkins              WeeklyCheckin[]
   athleteProfile        AthleteProfile?
+  athleteModel          AthleteModel?
   weeklyBriefs          WeeklyBrief[]
   partnershipsSent      Partnership[]   @relation("PartnerSent")
   partnershipsReceived  Partnership[]   @relation("PartnerReceived")
@@ -364,6 +365,43 @@ enum PartnerStatus {
   PENDING
   ACTIVE
   DECLINED
+}
+
+model AthleteModel {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Banister impulse-response fitness model
+  ctl            Float?  // chronic training load (42-day EWMA)
+  atl            Float?  // acute training load (7-day EWMA)
+  tsb            Float?  // training stress balance = CTL - ATL
+  tssHistory     Json?   // TssEntry[]: [{ date: string, tss: number }]
+
+  // Behavioral signals
+  rpeAvg7d          Float?
+  rpeAvg28d         Float?
+  complianceRate28d Float?
+  avgWeeklyMiles    Float?
+
+  // Recovery patterns
+  avgRecovery7d   Float?
+  avgHrv7d        Float?
+  avgSleepScore7d Float?
+
+  // HYROX-specific projections
+  projectedHyroxTime Float?
+  stationReadiness   Float?
+
+  // Risk and confidence
+  weaknesses     String[]
+  injuryRiskFlag Boolean  @default(false)
+  injuryRiskNote String?
+  dataConfidence Float    @default(0)
+
+  lastComputedAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model WeeklyBrief {

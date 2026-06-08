@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { syncStravaActivities } from "@/lib/strava/sync";
@@ -26,6 +27,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    after(async () => {
+      const { computeAthleteModel } = await import("@/lib/athlete/computeAthleteModel");
+      await Promise.allSettled(users.map(u => computeAthleteModel(u.id)));
+    });
+
     return NextResponse.json({ ok: true, synced: total });
   }
 
@@ -34,8 +40,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const syncUserId = session.user.id as string;
   try {
-    const count = await syncStravaActivities(session.user.id as string);
+    const count = await syncStravaActivities(syncUserId);
+    after(async () => {
+      const { computeAthleteModel } = await import("@/lib/athlete/computeAthleteModel");
+      await computeAthleteModel(syncUserId).catch(() => {});
+    });
     return NextResponse.json({ ok: true, activities: count });
   } catch (err) {
     return NextResponse.json(

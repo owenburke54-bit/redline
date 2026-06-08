@@ -13,6 +13,7 @@ import { CoachNudgeCard } from "@/components/coach/CoachNudgeCard";
 import { WeeklyBriefCard } from "@/components/dashboard/WeeklyBriefCard";
 import { DedicationScoreButton } from "@/components/dashboard/DedicationScoreButton";
 import { PartnerSection } from "@/components/partner/PartnerSection";
+import { RpeNudgeCard } from "@/components/dashboard/RpeNudgeCard";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -78,7 +79,7 @@ export default async function DashboardPage() {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 7);
 
-  const [user, events, todayWorkouts, todayRecovery, recentActivities, todayCycle, todayGarmin, lastCheckin, weekWorkouts] = await Promise.all([
+  const [user, events, todayWorkouts, todayRecovery, recentActivities, todayCycle, todayGarmin, lastCheckin, weekWorkouts, athleteModel, pendingRpeWorkouts] = await Promise.all([
     db.user.findUnique({ where: { id: userId }, select: { id: true, name: true, dedicationScore: true, whoopAccessToken: true, whoopId: true, garminAccessToken: true, garminUserId: true } }),
     db.event.findMany({ where: { userId, isActive: true }, orderBy: { date: "asc" }, include: { plan: { select: { id: true } } } }),
     db.workout.findMany({
@@ -115,6 +116,22 @@ export default async function DashboardPage() {
     db.workout.findMany({
       where: { userId, scheduledDate: { gte: weekStart, lt: weekEnd } },
       select: { status: true, type: true },
+    }),
+    db.athleteModel.findUnique({
+      where: { userId },
+      select: { injuryRiskFlag: true, injuryRiskNote: true, tsb: true },
+    }),
+    db.workout.findMany({
+      where: {
+        userId,
+        status: "COMPLETED",
+        completedAt: { gte: fortyEightHoursAgo },
+        perceivedEffort: null,
+        stravaActivityId: { not: null },
+      },
+      select: { id: true, title: true, type: true },
+      orderBy: { completedAt: "desc" },
+      take: 3,
     }),
   ]);
 
@@ -293,6 +310,43 @@ export default async function DashboardPage() {
               );
             })}
           </div>
+        </section>
+      )}
+
+      {/* Injury risk warning */}
+      {athleteModel?.injuryRiskFlag && (
+        <section>
+          <div
+            className="rounded-xl p-4 flex items-start gap-3"
+            style={{ background: "rgba(255,45,45,0.08)", border: "1px solid rgba(255,45,45,0.25)" }}
+          >
+            <div
+              className="h-5 w-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-black"
+              style={{ background: "#FF2D2D", color: "#fff" }}
+            >
+              !
+            </div>
+            <div>
+              <p className="text-[12px] font-bold" style={{ color: "#FF2D2D" }}>
+                Injury Risk Elevated
+              </p>
+              {athleteModel.injuryRiskNote && (
+                <p className="text-[11px] mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+                  {athleteModel.injuryRiskNote}
+                </p>
+              )}
+              <p className="text-[10px] mt-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+                Consider an extra recovery day. Ask your coach for a modified schedule.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* RPE nudge — rate recently completed Strava-matched workouts */}
+      {pendingRpeWorkouts.length > 0 && (
+        <section>
+          <RpeNudgeCard workouts={pendingRpeWorkouts} />
         </section>
       )}
 

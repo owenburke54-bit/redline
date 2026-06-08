@@ -27,10 +27,16 @@ export function ReadinessWidget({
   readiness,
   predicted,
   accentColor,
+  ctl,
+  atl,
+  tsb,
 }: {
   readiness: ReadinessResult;
   predicted: PredictedTime | null;
   accentColor: string;
+  ctl?: number | null;
+  atl?: number | null;
+  tsb?: number | null;
 }) {
   const hasRealRecovery = readiness.breakdown.recovery !== 65;
 
@@ -92,6 +98,48 @@ export function ReadinessWidget({
         <TrendingUp className="h-3 w-3 mt-0.5 shrink-0" style={{ color: readiness.color }} />
         {readiness.insight}
       </p>
+
+      {/* CTL / ATL / TSB one-liner */}
+      {ctl != null && (
+        <div
+          className="mt-3 pt-3 flex items-center gap-3"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
+        >
+          <span className="text-[9px] font-semibold tracking-[0.15em] uppercase text-muted-foreground/25">
+            Load
+          </span>
+          <div className="flex items-center gap-3 text-[10px] tabular-nums">
+            <span>
+              <span style={{ color: "rgba(255,255,255,0.25)" }}>CTL </span>
+              <span className="font-bold" style={{ color: "rgba(255,255,255,0.55)" }}>
+                {ctl.toFixed(0)}
+              </span>
+            </span>
+            {atl != null && (
+              <span>
+                <span style={{ color: "rgba(255,255,255,0.25)" }}>ATL </span>
+                <span className="font-bold" style={{ color: "rgba(255,255,255,0.55)" }}>
+                  {atl.toFixed(0)}
+                </span>
+              </span>
+            )}
+            {tsb != null && (
+              <span>
+                <span style={{ color: "rgba(255,255,255,0.25)" }}>TSB </span>
+                <span
+                  className="font-bold"
+                  style={{
+                    color: tsb > 5 ? "#00E87A" : tsb < -25 ? "#FF2D2D" : "rgba(255,255,255,0.55)",
+                  }}
+                >
+                  {tsb > 0 ? "+" : ""}
+                  {tsb.toFixed(0)}
+                </span>
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

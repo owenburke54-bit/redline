@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { syncWhoopData } from "@/lib/whoop/sync";
@@ -19,6 +20,12 @@ export async function POST(req: Request) {
     );
 
     const succeeded = results.filter(r => r.status === "fulfilled").length;
+
+    after(async () => {
+      const { computeAthleteModel } = await import("@/lib/athlete/computeAthleteModel");
+      await Promise.allSettled(users.map(u => computeAthleteModel(u.id)));
+    });
+
     return NextResponse.json({ synced: succeeded, total: users.length });
   }
 
@@ -35,8 +42,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "WHOOP not connected" }, { status: 400 });
   }
 
+  const syncUserId = session.user.id as string;
   try {
-    const result = await syncWhoopData(session.user.id as string, 30);
+    const result = await syncWhoopData(syncUserId, 30);
+    after(async () => {
+      const { computeAthleteModel } = await import("@/lib/athlete/computeAthleteModel");
+      await computeAthleteModel(syncUserId).catch(() => {});
+    });
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Sync failed";

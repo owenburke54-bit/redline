@@ -89,6 +89,60 @@ Return format:
 }`;
 }
 
+interface AthleteModelSnapshot {
+  ctl: number | null;
+  atl: number | null;
+  tsb: number | null;
+  rpeAvg7d: number | null;
+  rpeAvg28d: number | null;
+  complianceRate28d: number | null;
+  avgWeeklyMiles: number | null;
+  avgRecovery7d: number | null;
+  weaknesses: string[];
+  injuryRiskFlag: boolean;
+  injuryRiskNote: string | null;
+  dataConfidence: number;
+  lastComputedAt: Date;
+}
+
+function interpretCTL(ctl: number): string {
+  if (ctl >= 70) return "high fitness base";
+  if (ctl >= 50) return "solid aerobic base";
+  if (ctl >= 30) return "moderate base, building phase";
+  return "low base — early training or returning from break";
+}
+
+function interpretTSB(tsb: number): string {
+  if (tsb > 10) return "fresh — undertapered or resting";
+  if (tsb >= -10) return "balanced load";
+  if (tsb >= -30) return "normal training fatigue";
+  return "HIGH FATIGUE — consider recovery";
+}
+
+function buildAthleteModelSection(model: AthleteModelSnapshot | null): string {
+  if (!model) return "";
+  const ageH = Math.round((Date.now() - model.lastComputedAt.getTime()) / 3_600_000);
+  const freshness = ageH < 24 ? `${ageH}h ago` : `${Math.round(ageH / 24)}d ago`;
+  const lines: string[] = [`ATHLETE FITNESS MODEL (computed ${freshness}):`];
+  if (model.ctl != null)
+    lines.push(`Chronic Fitness (CTL): ${model.ctl.toFixed(1)} — ${interpretCTL(model.ctl)}`);
+  if (model.tsb != null)
+    lines.push(`Freshness (TSB): ${model.tsb.toFixed(1)} — ${interpretTSB(model.tsb)}`);
+  if (model.rpeAvg7d != null) lines.push(`Avg RPE this week: ${model.rpeAvg7d.toFixed(1)}/10`);
+  if (model.rpeAvg28d != null) lines.push(`Avg RPE last 28d: ${model.rpeAvg28d.toFixed(1)}/10`);
+  if (model.complianceRate28d != null)
+    lines.push(`Compliance last 28d: ${Math.round(model.complianceRate28d * 100)}%`);
+  if (model.avgWeeklyMiles != null)
+    lines.push(`Avg weekly miles: ${model.avgWeeklyMiles.toFixed(1)}mi`);
+  if (model.weaknesses.length > 0)
+    lines.push(`Identified weaknesses: ${model.weaknesses.join(", ")}`);
+  if (model.injuryRiskFlag)
+    lines.push(`⚠ INJURY RISK ELEVATED: ${model.injuryRiskNote}`);
+  if (model.dataConfidence < 0.3)
+    lines.push(`Data confidence: LOW (${Math.round(model.dataConfidence * 100)}%) — limited history`);
+  return lines.join("\n");
+}
+
 export function buildCoachSystemPrompt(params: {
   athleteName: string;
   dedicationScore: number;
@@ -101,6 +155,7 @@ export function buildCoachSystemPrompt(params: {
   activeConflicts: string[];
   classSchedule?: { studios: { id: string; name: string; days: number[] }[] } | null;
   currentDate?: string;
+  athleteModel?: AthleteModelSnapshot | null;
   recentTraining?: {
     completedWorkouts: Array<{
       date: string;
@@ -118,7 +173,7 @@ export function buildCoachSystemPrompt(params: {
     whoopTrend: Array<{ date: string; score: number; hrv: number | null }>;
   };
 }): string {
-  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, stravaZoneContext, activeConflicts, classSchedule, currentDate, recentTraining } = params;
+  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, stravaZoneContext, activeConflicts, classSchedule, currentDate, athleteModel, recentTraining } = params;
 
   const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const classScheduleNote = classSchedule?.studios && classSchedule.studios.length > 0
@@ -213,6 +268,8 @@ WHOOP trend (7 days):
 ${whoopLines}`;
   })() : "";
 
+  const athleteModelSection = buildAthleteModelSection(athleteModel ?? null);
+
   return `You are a direct, experienced endurance and functional fitness coach working with ${athleteName}.
 ${currentDate ? `Today is ${currentDate}.` : ""}
 
@@ -222,7 +279,7 @@ Dedication score: ${dedicationScore}/10${dedicationScore >= 8 ? " — they expec
 
 ACTIVE EVENTS:
 ${activeEvents.map(e => `- ${e.name} (${e.type}): ${e.weeksOut} weeks away${e.goalTime ? ` | Goal: ${e.goalTime}` : ""}`).join("\n")}
-${recentTrainingSection}
+${athleteModelSection ? `\n${athleteModelSection}\n` : ""}${recentTrainingSection}
 THIS WEEK'S WORKOUTS:
 ${currentWeekWorkouts}
 

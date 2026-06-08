@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { selectTemplate, buildPlan, summarizePlanForAI, isTriathlonEvent } from "@/lib/plans/planBuilder";
@@ -304,6 +305,11 @@ export async function POST(req: NextRequest) {
       console.error("[plans/generate] Strength enrichment failed:", err);
     });
   }
+
+  after(async () => {
+    const { computeAthleteModel } = await import("@/lib/athlete/computeAthleteModel");
+    await computeAthleteModel(userId).catch(() => {});
+  });
 
   return NextResponse.json({ planId: plan.id, templateBase: templateKey, totalWeeks: builtPlan.totalWeeks });
 }
