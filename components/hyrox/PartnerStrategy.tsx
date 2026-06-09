@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 import {
   HYROX_STATION_ORDER,
   HYROX_STATION_LABELS,
-  HYROX_STATION_EMOJI,
   SPLITTABLE_STATIONS,
   type HyroxStation,
 } from "@/lib/hyrox/constants";
+import { STATION_ICON } from "./stationIcons";
 import type { PartnerStrategy, StationAssignment } from "@/lib/hyrox/computeHyroxReadiness";
 
 interface Props {
@@ -39,7 +39,7 @@ function AssignmentRow({ row }: { row: StationAssignment }) {
 
   return (
     <div className="flex items-center gap-3 py-2.5 border-b last:border-0" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-      <span className="text-base w-6 shrink-0 text-center">{HYROX_STATION_EMOJI[row.station]}</span>
+      {(() => { const Icon = STATION_ICON[row.station as HyroxStation]; return <Icon className="h-4 w-4 shrink-0" style={{ color: "rgba(255,255,255,0.35)" }} />; })()}
       <p className="flex-1 text-[12px] font-medium" style={{ color: "rgba(255,255,255,0.8)" }}>
         {HYROX_STATION_LABELS[row.station]}
       </p>

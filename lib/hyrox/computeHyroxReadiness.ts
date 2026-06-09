@@ -4,6 +4,7 @@ import {
   STATION_SEARCH_TERMS,
   STATION_TRAINING_TIPS,
   SPLITTABLE_STATIONS,
+  TARGET_SPLITS_115,
   TARGET_TOTAL_115,
   type HyroxStation,
 } from "./constants";
@@ -158,6 +159,32 @@ export function computeStationReadiness(params: {
   }
 
   return result;
+}
+
+// predictedFinish = totalRunTime + totalStationTime
+// Run: 8 × (thresholdPacePerKm × 1.15), default 330 sec/km (5:30/km) if no pace data
+// Station: TARGET_SPLITS_115[st] × clamp(max(1, (100/score)×0.6), 1, 2)
+//   score=100 → 1.0× target | score=50 → 1.2× | score≤0 → 2.0× (cap)
+export function computeProjectedHyroxTime(params: {
+  stationReadiness: StationReadinessMap;
+  thresholdSecsPerKm?: number | null;
+}): number {
+  const DEFAULT_PACE_KM = 330;
+  const pacePerKm = params.thresholdSecsPerKm != null
+    ? params.thresholdSecsPerKm * 1.15
+    : DEFAULT_PACE_KM;
+
+  const totalRunSecs = 8 * pacePerKm;
+
+  const totalStationSecs = HYROX_STATION_ORDER.reduce((sum, station) => {
+    const score = params.stationReadiness[station].score;
+    const targetSecs = TARGET_SPLITS_115[station].seconds;
+    const rawMult = score > 0 ? (100 / score) * 0.6 : 2.0;
+    const multiplier = Math.max(1.0, Math.min(2.0, rawMult));
+    return sum + Math.round(targetSecs * multiplier);
+  }, 0);
+
+  return Math.round(totalRunSecs + totalStationSecs);
 }
 
 export function computePartnerStrategy(params: {

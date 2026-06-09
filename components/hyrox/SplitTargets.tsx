@@ -2,12 +2,12 @@
 
 import {
   HYROX_STATION_ORDER,
-  HYROX_STATION_EMOJI,
   TARGET_SPLITS_115,
   TARGET_RUN_SPLIT_115,
   TARGET_TOTAL_115,
   type HyroxStation,
 } from "@/lib/hyrox/constants";
+import { STATION_ICON } from "./stationIcons";
 import type { StationReadiness } from "@/lib/hyrox/computeHyroxReadiness";
 
 interface Props {
@@ -85,7 +85,7 @@ export function SplitTargets({ stationReadiness, projectedTotalSecs }: Props) {
             style={{ borderColor: "rgba(255,255,255,0.04)" }}
           >
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-sm shrink-0">{HYROX_STATION_EMOJI[station]}</span>
+              {(() => { const Icon = STATION_ICON[station]; return <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: "rgba(255,255,255,0.35)" }} />; })()}
               <span
                 className="text-[11px] font-medium truncate"
                 style={{ color: scoreColor(score) === "#00E87A" ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.9)" }}

@@ -5,6 +5,7 @@ import { daysUntil, formatDate } from "@/lib/utils";
 import {
   computeStationReadiness,
   computePartnerStrategy,
+  computeProjectedHyroxTime,
   formatHyroxTime,
 } from "@/lib/hyrox/computeHyroxReadiness";
 import { StationReadinessGrid } from "@/components/hyrox/StationReadinessGrid";
@@ -57,12 +58,7 @@ export default async function HyroxPage() {
     }),
     db.athleteModel.findUnique({
       where: { userId },
-      select: {
-        ctl: true,
-        complianceRate28d: true,
-        projectedHyroxTime: true,
-        stationReadiness: true,
-      },
+      select: { ctl: true, complianceRate28d: true },
     }),
     db.workout.findMany({
       where: {
@@ -107,7 +103,8 @@ export default async function HyroxPage() {
   });
 
   const daysLeft = daysUntil(event.date);
-  const projectedSecs = athleteModel?.projectedHyroxTime ?? null;
+  const isDoubles = event.type.includes("DOUBLES");
+  const projectedSecs = computeProjectedHyroxTime({ stationReadiness });
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -144,11 +141,11 @@ export default async function HyroxPage() {
         </div>
 
         {/* Projected time */}
-        {projectedSecs != null && (
-          <div
-            className="mt-4 rounded-xl px-4 py-3 flex items-center justify-between"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
-          >
+        <div
+          className="mt-4 rounded-xl px-4 py-3"
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+        >
+          <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>
                 Projected finish
@@ -157,28 +154,21 @@ export default async function HyroxPage() {
                 {formatHyroxTime(projectedSecs)}
               </p>
             </div>
-            {event.goalTime && (
-              <div className="text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>
-                  Goal
-                </p>
-                <p className="text-[1.4rem] font-black tabular-nums mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
-                  {event.goalTime}
-                </p>
-              </div>
-            )}
-            {!event.goalTime && (
-              <div className="text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>
-                  Target
-                </p>
-                <p className="text-[1.4rem] font-black tabular-nums mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-                  1:15:00
-                </p>
-              </div>
-            )}
+            <div className="text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>
+                {event.goalTime ? "Goal" : "Target"}
+              </p>
+              <p className="text-[1.4rem] font-black tabular-nums mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                {event.goalTime ?? "1:15:00"}
+              </p>
+            </div>
           </div>
-        )}
+          {isDoubles && (
+            <p className="text-[9px] mt-2" style={{ color: "rgba(255,255,255,0.2)" }}>
+              Based on Owen&apos;s data — updates when Victoria connects
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Station readiness */}

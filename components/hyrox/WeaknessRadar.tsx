@@ -2,10 +2,10 @@
 
 import {
   HYROX_STATION_ORDER,
-  HYROX_STATION_EMOJI,
   STATION_TRAINING_TIPS,
   type HyroxStation,
 } from "@/lib/hyrox/constants";
+import { STATION_ICON } from "./stationIcons";
 import type { StationReadiness } from "@/lib/hyrox/computeHyroxReadiness";
 
 interface Props {
@@ -48,7 +48,7 @@ export function WeaknessRadar({ stationReadiness }: Props) {
             >
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-xl leading-none">{HYROX_STATION_EMOJI[station]}</span>
+                  {(() => { const Icon = STATION_ICON[station]; return <Icon className="h-5 w-5 shrink-0" style={{ color: priorityColor }} />; })()}
                   <div>
                     <p className="text-[12px] font-bold leading-tight" style={{ color: "rgba(255,255,255,0.85)" }}>
                       {data.label}

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { TARGET_SPLITS_115, HYROX_STATION_ORDER, HYROX_STATION_EMOJI, type HyroxStation } from "@/lib/hyrox/constants";
+import { TARGET_SPLITS_115, HYROX_STATION_ORDER, type HyroxStation } from "@/lib/hyrox/constants";
+import { STATION_ICON } from "./stationIcons";
 import type { StationReadiness } from "@/lib/hyrox/computeHyroxReadiness";
 
 interface Props {
@@ -36,7 +37,7 @@ function StationCard({ station, data }: { station: HyroxStation; data: StationRe
       {/* Header row */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div>
-          <span className="text-lg leading-none">{HYROX_STATION_EMOJI[station]}</span>
+          {(() => { const Icon = STATION_ICON[station]; return <Icon className="h-4 w-4" style={{ color }} />; })()}
           <p className="text-[11px] font-semibold mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
             {data.label}
           </p>

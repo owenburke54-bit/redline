@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { computeTrainingZones } from "@/lib/strava/zones";
-import { computeStationReadiness } from "@/lib/hyrox/computeHyroxReadiness";
+import { computeStationReadiness, computeProjectedHyroxTime } from "@/lib/hyrox/computeHyroxReadiness";
 
 interface TssEntry {
   date: string; // YYYY-MM-DD
@@ -255,10 +255,6 @@ async function computeHyroxMetrics(
 
     if (!event) return { projectedHyroxTime: null, stationReadiness: null, hyroxStationScores: null };
 
-    const isDoubles = event.type.includes("DOUBLES");
-    const runMiles = isDoubles ? 2.485 : 4.97;
-    const baseStationSecs = isDoubles ? 25 * 60 : 20 * 60;
-
     const stationOnlyWorkouts = recentWorkouts.filter(w =>
       w.type === "HYROX_STATION_WORK" || w.type === "HYROX_SIM"
     );
@@ -266,9 +262,8 @@ async function computeHyroxMetrics(
     const stationReadiness =
       stationOnlyWorkouts.length > 0 ? stationCompleted / stationOnlyWorkouts.length : null;
 
-    // Per-station scores
     const stationScoreMap = computeStationReadiness({
-      ctl: null, // filled in after fitness metrics — passed as null here, proxy used
+      ctl: null,
       complianceRate28d: null,
       recentWorkouts,
     });
@@ -277,9 +272,11 @@ async function computeHyroxMetrics(
       hyroxStationScores[station] = data.score;
     }
 
-    const runTimeSecs = thresholdSecsPerMile * runMiles * 1.05;
-    const stationPenalty = (1 - (stationReadiness ?? 0.5)) * 10 * 60;
-    const projectedHyroxTime = Math.round(runTimeSecs + baseStationSecs + stationPenalty);
+    const thresholdSecsPerKm = thresholdSecsPerMile / 1.60934;
+    const projectedHyroxTime = computeProjectedHyroxTime({
+      stationReadiness: stationScoreMap,
+      thresholdSecsPerKm,
+    });
 
     return { projectedHyroxTime, stationReadiness, hyroxStationScores };
   } catch {
