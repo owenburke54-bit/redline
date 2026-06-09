@@ -46,6 +46,7 @@ model User {
   partnershipsSent      Partnership[]   @relation("PartnerSent")
   partnershipsReceived  Partnership[]   @relation("PartnerReceived")
   planAdaptations       PlanAdaptation[]
+  passwordResetTokens   PasswordResetToken[]
 }
 
 model Account {
@@ -436,6 +437,16 @@ model PlanAdaptation {
   appliedAt   DateTime  @default(now())
   dismissedAt DateTime?
 
+  createdAt DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique @default(cuid())
+  expiresAt DateTime
+  used      Boolean  @default(false)
   createdAt DateTime @default(now())
 }
 
