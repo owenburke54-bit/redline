@@ -167,6 +167,7 @@ export function buildCoachSystemPrompt(params: {
   currentDate?: string;
   athleteModel?: AthleteModelSnapshot | null;
   recentAdaptation?: AdaptationContext | null;
+  hyroxStationScores?: Record<string, number> | null;
   recentTraining?: {
     completedWorkouts: Array<{
       date: string;
@@ -184,7 +185,7 @@ export function buildCoachSystemPrompt(params: {
     whoopTrend: Array<{ date: string; score: number; hrv: number | null }>;
   };
 }): string {
-  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, stravaZoneContext, activeConflicts, classSchedule, currentDate, athleteModel, recentAdaptation, recentTraining } = params;
+  const { athleteName, dedicationScore, profileSummary, activeEvents, currentWeekWorkouts, recentActivity, whoopContext, stravaZoneContext, activeConflicts, classSchedule, currentDate, athleteModel, recentAdaptation, hyroxStationScores, recentTraining } = params;
 
   const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const classScheduleNote = classSchedule?.studios && classSchedule.studios.length > 0
@@ -281,6 +282,28 @@ ${whoopLines}`;
 
   const athleteModelSection = buildAthleteModelSection(athleteModel ?? null);
 
+  const hyroxStationSection = (() => {
+    if (!hyroxStationScores || !hasHyrox) return "";
+    const STATION_NAMES: Record<string, string> = {
+      SKI_ERG: "SkiErg", SLED_PUSH: "Sled Push", SLED_PULL: "Sled Pull",
+      BURPEE_BROAD_JUMP: "Burpee Broad Jump", ROW_ERG: "RowErg",
+      FARMERS_CARRY: "Farmers Carry", SANDBAG_LUNGE: "Sandbag Lunge", WALL_BALLS: "Wall Balls",
+    };
+    const lines = ["HYROX STATION READINESS (0-100):"];
+    for (const [key, score] of Object.entries(hyroxStationScores)) {
+      const label = score >= 75 ? "STRONG" : score >= 50 ? "DEVELOPING" : "NEEDS WORK";
+      lines.push(`- ${STATION_NAMES[key] ?? key}: ${score}/100 (${label})`);
+    }
+    const weakest = Object.entries(hyroxStationScores)
+      .sort(([, a], [, b]) => a - b)
+      .slice(0, 2)
+      .filter(([, s]) => s < 60);
+    if (weakest.length > 0) {
+      lines.push(`Priority gaps: ${weakest.map(([k]) => STATION_NAMES[k] ?? k).join(", ")}`);
+    }
+    return lines.join("\n");
+  })();
+
   const adaptationSection = recentAdaptation ? (() => {
     const daysAgo = Math.floor((Date.now() - new Date(recentAdaptation.appliedAt).getTime()) / 86400000);
     const when = daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`;
@@ -310,7 +333,7 @@ Dedication score: ${dedicationScore}/10${dedicationScore >= 8 ? " — they expec
 
 ACTIVE EVENTS:
 ${activeEvents.map(e => `- ${e.name} (${e.type}): ${e.weeksOut} weeks away${e.goalTime ? ` | Goal: ${e.goalTime}` : ""}`).join("\n")}
-${athleteModelSection ? `\n${athleteModelSection}\n` : ""}${adaptationSection ? `\n${adaptationSection}\n` : ""}${recentTrainingSection}
+${athleteModelSection ? `\n${athleteModelSection}\n` : ""}${hyroxStationSection ? `\n${hyroxStationSection}\n` : ""}${adaptationSection ? `\n${adaptationSection}\n` : ""}${recentTrainingSection}
 THIS WEEK'S WORKOUTS:
 ${currentWeekWorkouts}
 

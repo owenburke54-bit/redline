@@ -47,6 +47,7 @@ model User {
   partnershipsReceived  Partnership[]   @relation("PartnerReceived")
   planAdaptations       PlanAdaptation[]
   passwordResetTokens   PasswordResetToken[]
+  hyroxIntelligence     HyroxIntelligence[]
 }
 
 model Account {
@@ -99,6 +100,7 @@ model AthleteProfile {
   avgWeeklyEffort         Float?
   consistencyScore        Float?
   classSchedule           Json?
+  showHyroxTab            Boolean @default(true)
 
   updatedAt DateTime @updatedAt
 }
@@ -393,8 +395,9 @@ model AthleteModel {
   avgSleepScore7d Float?
 
   // HYROX-specific projections
-  projectedHyroxTime Float?
-  stationReadiness   Float?
+  projectedHyroxTime  Float?
+  stationReadiness    Float?
+  hyroxStationScores  Json?  // Record<HyroxStation, number> — per-station 0-100
 
   // Risk and confidence
   weaknesses     String[]
@@ -438,6 +441,22 @@ model PlanAdaptation {
   dismissedAt DateTime?
 
   createdAt DateTime @default(now())
+}
+
+model HyroxIntelligence {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stationAdvice          Json    // { station: string, advice: string[] }[]
+  raceDayBrief           String
+  partnerNotes           String?
+  weaknessInterventions  Json    // { weakness: string, interventions: string[] }[]
+
+  generatedAt DateTime @default(now())
+  weekStart   DateTime
+
+  @@unique([userId, weekStart])
 }
 
 model PasswordResetToken {

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { computeTrainingZones } from "@/lib/strava/zones";
+import { computeStationReadiness } from "@/lib/hyrox/computeHyroxReadiness";
 
 interface TssEntry {
   date: string; // YYYY-MM-DD
@@ -30,6 +31,7 @@ interface RecoveryResult {
 interface HyroxResult {
   projectedHyroxTime: number | null;
   stationReadiness: number | null;
+  hyroxStationScores: Record<string, number> | null;
 }
 
 // rTSS = duration_hours × (threshold_pace / actual_pace)² × 100
@@ -216,12 +218,12 @@ async function computeHyroxMetrics(
   thresholdSecsPerMile: number | null,
 ): Promise<HyroxResult> {
   try {
-    if (!thresholdSecsPerMile) return { projectedHyroxTime: null, stationReadiness: null };
+    if (!thresholdSecsPerMile) return { projectedHyroxTime: null, stationReadiness: null, hyroxStationScores: null };
 
-    const d28 = new Date();
-    d28.setDate(d28.getDate() - 28);
+    const d42 = new Date();
+    d42.setDate(d42.getDate() - 42);
 
-    const [event, stationWorkouts] = await Promise.all([
+    const [event, recentWorkouts] = await Promise.all([
       db.event.findFirst({
         where: {
           userId,
@@ -244,32 +246,44 @@ async function computeHyroxMetrics(
       db.workout.findMany({
         where: {
           userId,
-          type: { in: ["HYROX_STATION_WORK", "HYROX_SIM"] },
-          scheduledDate: { gte: d28 },
+          type: { in: ["HYROX_STATION_WORK", "HYROX_SIM", "STRENGTH"] },
+          scheduledDate: { gte: d42 },
         },
-        select: { status: true },
+        select: { status: true, type: true, title: true, description: true, perceivedEffort: true },
       }),
     ]);
 
-    if (!event) return { projectedHyroxTime: null, stationReadiness: null };
+    if (!event) return { projectedHyroxTime: null, stationReadiness: null, hyroxStationScores: null };
 
     const isDoubles = event.type.includes("DOUBLES");
-    // Solo: runs all 8km (4.97mi). Doubles: each athlete runs 4km (2.485mi).
     const runMiles = isDoubles ? 2.485 : 4.97;
     const baseStationSecs = isDoubles ? 25 * 60 : 20 * 60;
 
-    const stationCompleted = stationWorkouts.filter((w) => w.status === "COMPLETED").length;
+    const stationOnlyWorkouts = recentWorkouts.filter(w =>
+      w.type === "HYROX_STATION_WORK" || w.type === "HYROX_SIM"
+    );
+    const stationCompleted = stationOnlyWorkouts.filter((w) => w.status === "COMPLETED").length;
     const stationReadiness =
-      stationWorkouts.length > 0 ? stationCompleted / stationWorkouts.length : null;
+      stationOnlyWorkouts.length > 0 ? stationCompleted / stationOnlyWorkouts.length : null;
 
-    // Race pace slightly above threshold; penalty for underprepared stations
+    // Per-station scores
+    const stationScoreMap = computeStationReadiness({
+      ctl: null, // filled in after fitness metrics — passed as null here, proxy used
+      complianceRate28d: null,
+      recentWorkouts,
+    });
+    const hyroxStationScores: Record<string, number> = {};
+    for (const [station, data] of Object.entries(stationScoreMap)) {
+      hyroxStationScores[station] = data.score;
+    }
+
     const runTimeSecs = thresholdSecsPerMile * runMiles * 1.05;
     const stationPenalty = (1 - (stationReadiness ?? 0.5)) * 10 * 60;
     const projectedHyroxTime = Math.round(runTimeSecs + baseStationSecs + stationPenalty);
 
-    return { projectedHyroxTime, stationReadiness };
+    return { projectedHyroxTime, stationReadiness, hyroxStationScores };
   } catch {
-    return { projectedHyroxTime: null, stationReadiness: null };
+    return { projectedHyroxTime: null, stationReadiness: null, hyroxStationScores: null };
   }
 }
 
@@ -357,6 +371,7 @@ export async function computeAthleteModel(userId: string): Promise<void> {
     avgSleepScore7d: recovery.avgSleepScore7d,
     projectedHyroxTime: hyrox.projectedHyroxTime,
     stationReadiness: hyrox.stationReadiness,
+    hyroxStationScores: hyrox.hyroxStationScores as object ?? undefined,
     weaknesses,
     injuryRiskFlag,
     injuryRiskNote,

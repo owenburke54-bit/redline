@@ -127,6 +127,7 @@ export async function POST(req: NextRequest) {
         avgWeeklyMiles: true, avgRecovery7d: true,
         weaknesses: true, injuryRiskFlag: true, injuryRiskNote: true,
         dataConfidence: true, lastComputedAt: true,
+        hyroxStationScores: true,
       },
     }),
     // Most recent plan adaptation from the last 30 days
@@ -262,6 +263,7 @@ export async function POST(req: NextRequest) {
     whoopContext: wearableContext,
     stravaZoneContext,
     athleteModel: athleteModel ?? null,
+    hyroxStationScores: (athleteModel?.hyroxStationScores as Record<string, number> | null) ?? null,
     recentAdaptation: recentAdaptation ? {
       ...recentAdaptation,
       weekRange: recentAdaptation.weekRange as { from: number; to: number },
