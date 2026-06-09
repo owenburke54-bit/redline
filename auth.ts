@@ -26,24 +26,40 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         rememberMe: { label: "Remember me", type: "checkbox" },
       },
       async authorize(credentials) {
-        const parsed = loginSchema.safeParse(credentials);
-        if (!parsed.success) return null;
+        console.log("[AUTH] authorize called with email:", credentials?.email);
+        try {
+          const parsed = loginSchema.safeParse(credentials);
+          if (!parsed.success) {
+            console.log("[AUTH] schema validation failed:", parsed.error.flatten());
+            return null;
+          }
 
-        const user = await db.user.findUnique({
-          where: { email: parsed.data.email },
-        });
-        if (!user || !user.password) return null;
+          const user = await db.user.findUnique({
+            where: { email: parsed.data.email },
+          });
+          console.log("[AUTH] user found:", !!user, "userId:", user?.id);
 
-        const valid = await bcrypt.compare(parsed.data.password, user.password);
-        if (!valid) return null;
+          if (!user || !user.password) {
+            console.log("[AUTH] no user or no password field");
+            return null;
+          }
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          onboardingComplete: user.onboardingComplete,
-          rememberMe: parsed.data.rememberMe !== "false",
-        };
+          const valid = await bcrypt.compare(parsed.data.password, user.password);
+          console.log("[AUTH] password valid:", valid);
+
+          if (!valid) return null;
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            onboardingComplete: user.onboardingComplete,
+            rememberMe: parsed.data.rememberMe !== "false",
+          };
+        } catch (err) {
+          console.error("[AUTH] authorize error:", err);
+          return null;
+        }
       },
     }),
   ],
